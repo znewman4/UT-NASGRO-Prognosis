@@ -55,6 +55,7 @@ sensors:
 policies:
   none: {kind: none}
   one_off: {kind: one_off, at: 0.0}
+  sized_now: {kind: at_forecast}   # one fresh sizing at the forecast moment: the study's own assumption
   periodic_0.05: {kind: periodic, T_frac: 0.05}
   periodic_0.1: {kind: periodic, T_frac: 0.1}
   periodic_0.2: {kind: periodic, T_frac: 0.2}
@@ -64,6 +65,7 @@ policies:
 estimators:
   grid: {kind: grid, n_lambda: 121, n_a0: 61}
   is: {kind: nasgro_is, n: 4000, seed: 2}
+  static_mc: {kind: static_mc, n: 2000}   # current practice: size once, NASGRO Monte Carlo around the reading
   study_baseline: {kind: study_mc, known: [], n: 10000, score_kinds: [depth, time]}   # the study's n; cached per depth
   oracle_depth: {kind: study_mc, known: [depth], n: 10000, score_kinds: [depth, time]}
   oracle_depth_lambda: {kind: study_mc, known: [depth, lambda], n: 2000, score_kinds: [depth, time]}
@@ -79,6 +81,10 @@ arms:
       sensor: [sd0.1, sd0.2, sd0.5]
       policy: [one_off, periodic_0.1, periodic_0.2]
       estimator: [is]
+    sized_now:                     # P1.2: a single fresh sizing at sd 0.17 vs 0.5 mm, without and with the record
+      sensor: [sd0.05, sd0.1, sd0.17, sd0.2, sd0.3, sd0.5]
+      policy: [sized_now]
+      estimator: [static_mc, is, grid]
   list:
     study_baseline: {sensor: sd0.5, policy: none, estimator: study_baseline}
     oracle_depth: {sensor: sd0.5, policy: none, estimator: oracle_depth}

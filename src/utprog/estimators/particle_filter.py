@@ -93,8 +93,13 @@ class ParticleFilter(Estimator):
             cur = np.where(ok, prop, cur)
         self.theta = self._from_x(x)
 
-    def posterior_draws(self, n, rng):
-        idx = rng.choice(self.n, size=n, p=self.weights())
+    def posterior_draws(self, n, rng, N=None):
+        w = self.weights()
+        if N is not None:
+            alive = w * (self.forward.rul(self.theta["a0"], self.theta) > N)
+            if alive.sum() > 0:
+                w = alive / alive.sum()
+        idx = rng.choice(self.n, size=n, p=w)
         return {k: v[idx] for k, v in self.theta.items()}
 
     def summary(self):

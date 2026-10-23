@@ -11,6 +11,7 @@ all on the same specimens and noise:
 | Kind | What it is | Role |
 |---|---|---|
 | `study_mc` | the sensitivity engine at the true current depth, chosen inputs at their true values | oracle and study baseline; reproduces the study to 1e-9 (D-005) |
+| `static_mc` | size once, NASGRO Monte Carlo around the reading | current practice (L0); reproduces the study's sizing sweep |
 | `nasgro_is` | importance sampling over full NASGRO input vectors | well-specified filter (like check B) |
 | `grid` / `model_selection` | lumped growth multiplier λ on C; Bayes factors between residual-stress hypotheses | practical filter |
 
@@ -25,14 +26,14 @@ Approaches follow the scoping page: 1 growth rate, 2 residual stress, 3 interval
 | 2 · Oracle arms, fixed-depth scoring, same cases and spreads | done; oracle reproduces stored U90 and every tested reduction to 1e-9 |
 | 3 · Code: renumbering, LCR sensor + E-03c, bond failure, biased sensor, perfect inspection, mismatched truth, sweeps | done for Approaches 1–3; E-04, E-05 are the second round |
 | 4 · Inputs agreed with supervisors (sensor values, gates, costs) | **open**: every such value is marked PLACEHOLDER |
-| 5 · Runs | tests pass (82); every config smoke-tested on 2–3 specimens; **no experiment run yet** |
+| 5 · Runs | tests pass (85); every config smoke-tested on 2–3 specimens; **no experiment run yet** |
 
 ## Rerun
 
 ```bash
 git clone --recurse-submodules <this repo>        # or: git submodule update --init
 pip install -e ".[test]"
-python -m pytest                                   # 82 tests, incl. test 3 and the oracle check (~40 s)
+python -m pytest                                   # 85 tests, incl. test 3 and the oracle checks (~40 s)
 
 # after the inputs are agreed, in this order:
 python experiments/00_toy.py
@@ -46,6 +47,12 @@ python experiments/03_residual_stress.py configs/03c_residual_lcr.yaml
 python reports/efficacy.py                                           # reports/efficacy.md
 python reports/build.py                                              # per-run tables and figures
 ```
+
+**Cost** (upper bounds from the smoke runs, which include one-off table and oracle builds), in
+CPU-hours at the configured specimen counts: E-01 ≈ 26 (7 variants), E-01b ≈ 35, E-01c ≈ 30
+(24 sweep cells), E-02 ≈ 35, E-03 ≈ 100 (the continuous Bayes-factor arms dominate), E-03b ≈ 16,
+E-03c ≈ 21. About 260 CPU-hours in all, or roughly 33 hours on 8 cores. For a first report,
+`--n 200` on E-03 and the Approach 1–3 base variants cuts this by about two thirds.
 
 Each run writes a `manifest.json` (config hash, commit, pipeline commit, versions, seed); reports
 ignore any result without one. Add `--n 2 --out <scratch dir>` to any script for a smoke test that

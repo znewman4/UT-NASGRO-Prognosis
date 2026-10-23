@@ -22,7 +22,7 @@ lognormal CoV 0.6 below); n = 10,000; mean of seeds 1–5.
 | Approach | Prediction (exact definition) | Engine | Simulation that tests it |
 |---|---|---|---|
 | 1 · growth rate | **P1.1** Depth known removes U90 at 1 mm: plate 30.3 % [29.2, 31.4], bar 40.0 % [38.9, 40.8]. Other depths in the YAML | rebuild | E-01 / E-01b `consistency`: `oracle_depth` against `study_baseline`, scored when the true crack reaches each depth |
-| 1 | **P1.2** Sizing sd 0.167 mm gives 82 % (bar) / 86 % (plate) of the exact-depth reduction at 1 mm | rebuild (seed 1) | E-01 `sd0.17` arms against `oracle_depth` |
+| 1 | **P1.2** Sizing sd 0.167 mm gives 82 % (bar) / 86 % (plate) of the exact-depth reduction at 1 mm | rebuild (seed 1) | E-01 `sized_now` arms: current practice (`static_mc`) at sd 0.167 vs 0.5 mm, against `oracle_depth`; reproduces the study's sweep exactly when the reading is exact |
 | 1 | **P1.3** With crack state exact, the λ group (S or P, C–n, α) holds 62–84 % of U90 (plate 62–81, bar 79–84) | original, not committed | E-01 `oracle_state_lambda` (recomputed on the rebuild) |
 | 1 | **P1.4** 10 sizings at 0.1 mm cut forecast U90 30–40 % against one sizing; ~10 % at 0.5 mm | original, not committed | E-01 `checkB` (window of 1, 2, 10 sizings over 20 % of life; `is` is check B's same-model setting) |
 | 2 · residual stress | **P2.1** Tensile profile shortens 0.2–1 mm life by 0.26–0.40 decades; tensile makes almost all small cracks grow (plate 0.2 mm Pf 80 → 99 %), compressive stops more (bar 0.5 mm Pf 73 → 36 %) | rebuild | E-03 (depth record alone: `bf`, `is`; class-blind vs class-known oracles); E-03c (LCR layer averages + depth) |

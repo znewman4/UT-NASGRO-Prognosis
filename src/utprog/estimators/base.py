@@ -73,11 +73,12 @@ class Estimator(ABC):
         ...
 
     @abstractmethod
-    def posterior_draws(self, n, rng):
-        """Independent draws of theta from the current posterior."""
+    def posterior_draws(self, n, rng, N=None):
+        """Independent draws of theta from the current posterior; given N, conditioned on survival to N."""
 
     def forecast(self, N_now, n, rng):
-        th = self.posterior_draws(n, rng)
+        """Remaining life at N_now, given the readings and that the component has not failed by N_now."""
+        th = self.posterior_draws(n, rng, N=N_now)
         return self.forward.rul(self.forward.depth_at(N_now, th), th)
 
     def summary(self):

@@ -27,6 +27,7 @@ estimators:
 
 arms:
   products:
+    sized_now: {sensor: [], policy: [], estimator: []}   # not used here
     filter:
       sensor: [sd0.05, sd0.1, sd0.2, sd0.3, sd0.5, perfect]
       policy: [periodic_0.05, periodic_0.1, periodic_0.2, continuous]
@@ -43,6 +44,10 @@ arms:
       sensor: [bond0.2]
       policy: [continuous]
       estimator: [grid]
+    current_practice:              # L0: periodic sizing, NASGRO Monte Carlo around each reading, no learning
+      sensor: [sd0.2, sd0.5]
+      policy: [periodic_0.1, periodic_0.2]
+      estimator: [static_mc]
   list:
     oracle_periodic_0.1: {sensor: sd0.2, policy: periodic_0.1, estimator: oracle_decide}
     oracle_continuous: {sensor: sd0.2, policy: continuous, estimator: oracle_decide}

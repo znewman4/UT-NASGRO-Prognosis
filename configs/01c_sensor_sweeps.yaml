@@ -14,10 +14,16 @@ arms:
       sensor: [sd0.2]
       policy: [periodic_0.1]
       estimator: [is]
+    sized_now:
+      sensor: [sd0.2]
+      policy: [sized_now]
+      estimator: [static_mc, grid]
 variants:
   a1mm: {}
 sweeps:
   sensor_common.sd_rel: [0.0, 0.11, 0.19]          # Peng et al. 2018: image < 11 %, S-matrix < 19 %
   sensor_common.corr_frac: [0.0, 0.05]
   sensor_common.bias_sd_mm: [0.0, 0.1]
-  sensor_common.pod_a50_mm: [0.15, 0.4]
+  sensor_common:                                  # POD a50 and a90 move together
+    - {pod_a50_mm: 0.15, pod_a90_mm: 0.30}
+    - {pod_a50_mm: 0.40, pod_a90_mm: 0.80}

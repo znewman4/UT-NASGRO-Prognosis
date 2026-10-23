@@ -6,6 +6,8 @@
     continuous(dt)     every dt cycles (a permanently installed sensor)
     event_triggered    a base policy plus a burst of readings after each load event
     window(n, span)    n readings spread evenly over the first `span` of life (check B's design)
+    at_forecast        one reading at each forecast time: the realistic form of the study's
+                       assumption of a fresh sizing at the moment of the forecast
 
 Spacings are given in cycles or as a fraction of the nominal life (`*_frac`)
 and snapped to the sensor time grid, so readings of different arms at the same
@@ -85,6 +87,18 @@ class Window(Policy):
         return np.linspace(0.0, self.span, self.n) if self.n > 1 else np.zeros(1)
 
 
+class AtForecast(Policy):
+    kind = "at_forecast"
+
+    def schedule(self, specimen, ctx, horizon):
+        return np.asarray(getattr(specimen, "forecast_times", []), float)
+
+    def times(self, specimen, ctx):              # not snapped: the reading must coincide with the forecast
+        h = specimen.life if np.isfinite(specimen.life) else ctx["horizon"]
+        t = np.unique(self.schedule(specimen, ctx, h))
+        return t[(t >= 0.0) & (t < h)]
+
+
 class EventTriggered(Policy):
     kind = "event_triggered"
 
@@ -122,6 +136,8 @@ def from_config(spec, ctx):
         return Periodic(_cycles(spec, "T", ctx), _cycles(spec, "offset", ctx, spacing=False, default=0.0))
     if kind == "continuous":
         return Continuous(_cycles(spec, "dt", ctx))
+    if kind == "at_forecast":
+        return AtForecast()
     if kind == "window":
         return Window(spec["n"], _cycles(spec, "span", ctx, spacing=False))
     if kind == "event_triggered":

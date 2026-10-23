@@ -31,6 +31,7 @@ Output per run, in results/<experiment>/<variant>/<UTC time>_<config hash>/:
 """
 import argparse
 import itertools
+import re
 import json
 import time
 import warnings
@@ -51,7 +52,7 @@ from .estimators.likelihood import NoiseModel, StressNoise
 from .estimators.model_selection import ModelSelection
 from .estimators.nasgro_is import NasgroIS, Population
 from .estimators.particle_filter import ParticleFilter
-from .estimators.study_mc import StudyMC
+from .estimators.study_mc import StaticMC, StudyMC
 from .forward import nasgro_adapter as adapter
 from .forward.table_cache import NasgroTable
 from .forward.toy_paris import ToyParis
@@ -230,6 +231,9 @@ class Components:
             return self._oracles[name], None
         if noise is None:
             raise ValueError(f"estimator {name} needs a depth sensor in its arm")
+        if kind == "static_mc":
+            return StaticMC(self.case, noise, spec.get("n", 2000), spec.get("seed", 1), self.nominal,
+                            self.spread, self.rs_classes, spec.get("fix_tilt", False)), None
         if kind == "grid":
             return GridBayes(self.forward(), noise, stress_noise=stress, **_opts(spec, GRID_OPTS)), self.prior
         if kind == "particle_filter":
@@ -290,11 +294,17 @@ def forecast_arm(spec, arm, points, i):
     est, rng_f = _new_estimator(arm, i)
     obs = [] if getattr(est, "sees_truth", False) else _C.observe(spec, arm, i)
     n_s, n_sbc = int(sc.get("n_samples", 2000)), int(sc.get("sbc_draws", 0))
+    fresh = _C.policies[arm.policy].kind == "at_forecast"     # each forecast sees only its own fresh reading
     k = n_sized = 0
     out = []
     for N, kind, depth_mm in points:
         if kinds and kind not in kinds:
             continue
+        if fresh:
+            est, rng_f = _new_estimator(arm, i)
+            while k < len(obs) and obs[k].N < N:
+                k += 1
+            n_sized = 0
         while k < len(obs) and obs[k].N <= N:
             est.update(obs[k])
             n_sized += obs[k].kind == "sized"
@@ -312,7 +322,7 @@ def forecast_arm(spec, arm, points, i):
         rec.update(forecast_record(x, true_rul, spec.life, sc.get("alpha_rel", 0.2), sc.get("alpha_abs", 0.05)))
         rec.update(est.summary())
         if n_sbc and isinstance(est, (GridBayes, ParticleFilter)):
-            rec["sbc_rank"] = rank(est.posterior_draws(n_sbc, rng_f)["log_lambda"], spec.truth_theta["log_lambda"])
+            rec["sbc_rank"] = rank(est.posterior_draws(n_sbc, rng_f, N=N)["log_lambda"], spec.truth_theta["log_lambda"])
         out.append(rec)
     return out
 
@@ -380,10 +390,11 @@ def run_specimen(i):
     srow = dict(specimen=i, a0_mm=spec.a0 * 1e3, life=spec.life, a_fail_mm=spec.a_fail * 1e3,
                 true_log_lambda=spec.truth_theta["log_lambda"], label=spec.label, arrested=spec.arrested)
     points = forecast_points(spec, i)
+    spec.forecast_times = [N for N, _, _ in points]       # for the at_forecast policy only
     records, decisions = [], []
     for arm in _C.arms:
         records += forecast_arm(spec, arm, points, i)
-        if (cfg.get("decision") or {}).get("enabled") and _C.policies[arm.policy].kind != "none":
+        if (cfg.get("decision") or {}).get("enabled") and _C.policies[arm.policy].kind not in ("none", "at_forecast"):
             decisions += decide_arm(spec, arm, i)
     return srow, records, decisions
 
@@ -424,7 +435,8 @@ def run(cfg, out_dir, workers=None):
 
 def run_dir(cfg):
     stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H%M%SZ")
-    return RESULTS / cfg["experiment"] / cfg.get("variant", "base") / f"{stamp}_{cfgmod.config_hash(cfg)[:8]}"
+    variant = re.sub(r"[^A-Za-z0-9._=-]+", "_", cfg.get("variant", "base"))     # filesystem-safe on every OS
+    return RESULTS / cfg["experiment"] / variant / f"{stamp}_{cfgmod.config_hash(cfg)[:8]}"
 
 
 def main(argv=None, default_config=None):

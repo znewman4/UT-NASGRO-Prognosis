@@ -116,3 +116,44 @@ class StudyMC:
         if self._cacheable and len(self._cache) < 256:
             self._cache[key] = x
         return x
+
+
+class StaticMC(StudyMC):
+    """Current practice: size the crack, then run the NASGRO Monte Carlo around the reading.
+
+    The realistic form of the study's assumption and the L0 baseline of Approaches 1 and 3.
+    It uses only the latest sized reading y (taken as the current depth) and its sizing sd:
+    depth samples y + sd z, reflected at 20 um as in the study, every other input at its
+    industrial spread; no growth history, no survival. Without a sized reading yet, the depth
+    is the study's undetected model (lognormal, CoV 0.6) around the sizing limit. It does not
+    see the truth.
+    """
+    sees_truth = False
+
+    def __init__(self, case, noise, n=2000, seed=1, nominal=None, spread=None, rs_classes=None, fix_tilt=False):
+        super().__init__(case, (), n, seed, nominal, spread, rs_classes, fix_tilt)
+        self.noise = noise
+        self._cacheable = False
+
+    def reset(self, prior=None, rng=None):
+        self.last = None
+
+    def update(self, obs):
+        if obs.channel == "depth" and obs.kind == "sized":
+            self.last = float(obs.value)
+
+    def summary(self):
+        return {"static_depth_mm": self.last * 1e3 if self.last is not None else np.nan}
+
+    def forecast(self, N_now, n, rng):
+        ns = nasgro()
+        if self.last is None:
+            a_ref = max(self.noise.a_size_min, 1e-4)
+            s = ns.cases.sample(self.case, a_ref, self.n, seed=self.seed, fixed=self.fixed, undetected=True,
+                                spread=self.spread, nominal=self.nominal)
+        else:
+            s = ns.cases.sample(self.case, self.last, self.n, seed=self.seed, fixed=self.fixed + ("depth",),
+                                spread=self.spread, nominal=self.nominal)
+            a = self.last + float(self.noise.sd(self.last)) * ns.cases._z("depth", self.n, self.seed)
+            s["a_i"] = np.where(a > 2e-5, a, 2e-5 + np.abs(a - 2e-5))
+        return self.lives(s)

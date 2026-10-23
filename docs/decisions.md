@@ -69,6 +69,29 @@ Approach numbers follow the scoping page: 1 growth rate, 2 residual stress, 3 in
   the runs, and edited here with the date agreed. Sweeps (`01c`, `03c`, `failure_levels`) turn the
   results into conditions rather than single numbers.
 
+## D-008a · Forecasts condition on survival to the forecast time (23 Oct)
+
+- **Result.** Smoke runs showed a filter forecasting "already failed" for a slow specimen: its
+  prior said every growth rate fails before the forecast time. A component in service has not
+  failed, and that is information.
+- **Changes.** `grid`, `particle_filter`, `nasgro_is` and the Bayes-factor comparison all condition
+  on survival to N (`model_selection` adds the survival probability to each hypothesis's evidence).
+
+## D-008b · Current practice as its own arm, and what "realised fraction > 1" means (23 Oct)
+
+- **Result.** The study's populations have no time axis: depth is known to ±0.5 mm and everything
+  else is at its industrial spread. A filter in service also knows the elapsed time and the
+  start-depth prior, so even one fresh sizing partly informs the growth rate, and its realised
+  reduction can exceed the depth oracle's.
+- **Changes.** `static_mc` is current practice: size once, then run the NASGRO Monte Carlo around
+  the reading, with no history and no survival. With a reading at the true depth it reproduces the
+  study's baseline (sd 0.5 mm) and its one-third sizing level to 1e-9 (tests/test_oracle.py), so it
+  tests P1.2 like-for-like. Arms `sized_now` (one fresh sizing at each forecast, estimator reset
+  each time) compare current practice, the well-specified filter and the practical filter on the
+  same reading. Realised fractions of the filters are reported against both oracles; a fraction
+  above 1 against `oracle_depth` means the record (time, survival, repeated sizing) carries growth-rate
+  information, which `oracle_state_lambda` bounds.
+
 ## D-008 · Second round (23 Oct)
 
 - **Changes.** E-04 (R change with and without an opening sensor) and E-05 (angle sensor with a

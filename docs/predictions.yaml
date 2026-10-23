@@ -53,7 +53,7 @@ predictions:
     values:
       bar: {sd_0.5: 1.112, sd_0.167: 0.756, sd_0.017: 0.675}     # 82 % of the exact-depth reduction at 0.167 mm
       plate: {sd_0.5: 1.243, sd_0.167: 0.917, sd_0.017: 0.862}   # 86 %
-    tested_by: [E-01 sd0.17 arms against oracle_depth at 1 mm]
+    tested_by: [E-01 sized_now arms with static_mc (current practice) at sd 0.167 vs 0.5 and oracle_depth]
   P1.3:
     approach: 1
     statement: With crack state exact, the lumped growth-rate group lambda holds 62-84 % of the original U90

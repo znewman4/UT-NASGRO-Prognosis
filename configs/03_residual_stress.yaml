@@ -32,6 +32,7 @@ estimators:
 
 arms:
   products:
+    sized_now: {sensor: [], policy: [], estimator: []}   # not used here
     filter:
       sensor: [sd0.05, sd0.1, sd0.2, sd0.3, sd0.5]
       policy: [periodic_0.1, continuous]

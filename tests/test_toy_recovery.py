@@ -34,3 +34,14 @@ def test_recovers_lambda_and_start_depth(toy):
     assert est.n_regrid >= 1                       # the posterior outgrew the prior grid
     rul = est.forecast(0.8 * life, 4000, np.random.default_rng(2))
     assert np.median(rul) == pytest.approx(0.2 * life, rel=0.1)
+
+
+def test_forecast_conditions_on_survival(toy):
+    """With no readings, a forecast long after the nominal life keeps only growth rates slow enough
+    for the component to be still in service: no forecast says it has already failed."""
+    est = GridBayes(toy, NoiseModel(sd_abs=1e-4), n_lambda=121, n_a0=31)
+    est.reset(toy_prior(0.3))
+    nominal = toy.rul(np.array([1e-3]), {"log_lambda": np.array([0.0])})[0]
+    x = est.forecast(2.0 * nominal, 4000, np.random.default_rng(3))
+    assert np.mean(x > 0) > 0.99
+    assert est.summary()["post_log_lambda_mean"] < 0.1     # the unconditioned posterior is still the prior

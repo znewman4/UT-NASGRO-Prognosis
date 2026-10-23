@@ -1,7 +1,8 @@
 """YAML experiment configs: inheritance, variants and a stable hash.
 
 `sweeps` maps dotted paths to lists of values (e.g. "sensor_common.corr_frac":
-[0, 0.02, 0.05]); every combination is crossed with every variant, so results
+[0, 0.02, 0.05]); a value may be a dict to move several settings together (e.g.
+POD a50 and a90). Every combination is crossed with every variant, so results
 come out as conditions rather than single numbers.
 
 A config may name a parent with `extends: other.yaml`; dictionaries merge
@@ -50,6 +51,12 @@ def _nest(path, value):
     return out
 
 
+def _label(path, value):
+    if isinstance(value, dict):                  # a dict sweeps several values together
+        return ",".join(f"{k}={v}" for k, v in value.items())
+    return f"{path.split('.')[-1]}={value}"
+
+
 def variants(cfg):
     """[(name, resolved config)]: the base merged with each variant (or the base alone, 'base'),
     crossed with every combination of `sweeps`."""
@@ -63,7 +70,7 @@ def variants(cfg):
             c = deep_merge(base, over or {})
             for k, v in combo:
                 c = deep_merge(c, _nest(k, v))
-            vname = name + "".join(f"|{k.split('.')[-1]}={v}" for k, v in combo)
+            vname = name + "".join(f"|{_label(k, v)}" for k, v in combo)
             if vname != "base" or cfg.get("variants"):
                 c["variant"] = vname
             out.append((vname, c))

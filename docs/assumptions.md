@@ -53,6 +53,8 @@ y(N) = a(N) + b_mean + b + sd(a)·e(N); see the module docstring for the full mo
 | E7 | Tables interpolate log rate and Kmax linearly between axis nodes | approximation | bounded by test 5 (0.02 decades) |
 | E8 | Oracle and study-baseline arms (`study_mc`) are the sensitivity engine at the true current depth, with known inputs at their true values; tilt uncertain as in the study | design choice (D-005) | they reproduce the stored numbers to 1e-9 (tests/test_oracle.py); they see the truth and are references, not estimators |
 | E9 | `nasgro_is` draws its 4,000 particles from the truth's own priors (well-specified for a NASGRO-only truth) | design choice | weights degenerate with many precise readings; ESS is recorded with every forecast |
+| E11 | Filters condition every forecast on the component being in service at the forecast time | design choice (D-008a) | survival is information the static study does not use |
+| E12 | `static_mc` (current practice) takes the latest sized reading as the current depth, with its sizing sd, reflected at 20 µm; before any sized reading, the study's undetected model around the sizing limit | design choice (D-008b) | reproduces the study's sizing sweep to 1e-9 |
 | E10 | Grid refinement triggers at 1.5 nodes per posterior sd | approximation | Riemann sums of a Gaussian at this spacing are accurate to better than 0.1 %; the jitter within a cell adds at most ~2 % to the posterior sd |
 
 ## 4. Scoring

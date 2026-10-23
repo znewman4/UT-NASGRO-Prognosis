@@ -4,7 +4,9 @@ Each hypothesis is a GridBayes with its own forward model (e.g. a residual-
 stress scenario tabulated over its amplitude) and prior. All are updated on the
 same record. The evidence of each gives posterior model probabilities and
 Bayes factors (Kass & Raftery 1995; 2 ln BF > 6 is "strong"). The forecast is
-the Bayesian model average.
+the Bayesian model average. At a forecast time N the evidence includes the probability
+that the component is still in service, which is itself informative (a peened surface
+that stops a crack makes a long survival likely).
 """
 import numpy as np
 from scipy.special import logsumexp
@@ -27,24 +29,35 @@ class ModelSelection(Estimator):
         for k in self.names:
             self.members[k].update(obs)
 
-    def log_evidence(self):
-        return np.array([self.members[k].log_evidence() for k in self.names])
+    def log_evidence(self, N=None):
+        """log p(record | hypothesis), and with N also log P(still in service at N | record, hypothesis)."""
+        le = np.array([self.members[k].log_evidence() for k in self.names])
+        if N is not None:
+            with np.errstate(divide="ignore"):
+                le = le + np.log([self.members[k].survival_mass(N) for k in self.names])
+        return le
 
-    def probs(self):
-        lp = self.log_prior_probs + self.log_evidence()
+    def probs(self, N=None):
+        lp = self.log_prior_probs + self.log_evidence(N)
+        if not np.isfinite(lp).any():
+            lp = self.log_prior_probs + self.log_evidence()
         return np.exp(lp - logsumexp(lp))
 
-    def posterior_draws(self, n, rng):
+    def posterior_draws(self, n, rng, N=None):
         raise NotImplementedError("theta differs between hypotheses; use the members' draws")
 
     def forecast(self, N_now, n, rng):
-        counts = rng.multinomial(n, self.probs())
+        self._N = N_now
+        counts = rng.multinomial(n, self.probs(N_now))
         parts = [self.members[k].forecast(N_now, c, rng) for k, c in zip(self.names, counts) if c > 0]
         return np.concatenate(parts)
 
     def summary(self):
-        le = self.log_evidence()
-        p = self.probs()
+        N = getattr(self, "_N", None)
+        le = self.log_evidence(N)
+        if not np.isfinite(le).any():
+            le = self.log_evidence()
+        p = self.probs(N)
         order = np.argsort(-p)
         out = {f"p_{k}": float(pk) for k, pk in zip(self.names, p)}
         out.update({f"log_evidence_{k}": float(v) for k, v in zip(self.names, le)})

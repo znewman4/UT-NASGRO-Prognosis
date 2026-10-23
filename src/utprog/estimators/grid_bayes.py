@@ -11,6 +11,9 @@ narrower than `min_cells` spacings along a dimension, or puts more than
 `edge_mass` on an open edge, the grid is rebuilt around it and the stored
 record replayed. This is exact for this model: the likelihood is a function of
 the whole record, not of a filtered state.
+
+Forecasts at N condition on the component still being in service at N: grid points
+whose crack would already have failed are dropped (the observation "not failed yet").
 """
 import numpy as np
 from scipy import stats
@@ -75,6 +78,7 @@ class GridBayes(Estimator):
             self._theta_fw["_groups"] = [(tuple(float(self.theta[a][order[s]]) for a in axes), order[s:e])
                                          for s, e in zip(start, stops)]
         self.acc = replay(self.noise, self.forward, self._theta_fw, self.history)
+        self._life = None
         self.other_ll = np.zeros(self.log_prior.size)
         for obs in self.history:
             if obs.channel != "depth":
@@ -135,12 +139,32 @@ class GridBayes(Estimator):
             self._build(new)
             self.n_regrid += 1
 
-    def posterior_draws(self, n, rng):
+    def life(self):
+        """Cycles from N = 0 to failure at every grid point (cached per grid)."""
+        if self._life is None:
+            self._life = self.forward.rul(self.theta["a0"], self._theta_fw)
+        return self._life
+
+    def survival_mass(self, N):
+        """Posterior probability that the component is still in service at N."""
+        return float(self.weights() @ (self.life() > N))
+
+    def posterior_draws(self, n, rng, N=None):
+        """Posterior draws; given N, conditioned on the component not having failed by N."""
         w = self.weights()
+        if N is not None:
+            alive = w * (self.life() > N)
+            if alive.sum() > 0:                   # else the record contradicts survival: keep the posterior
+                w = alive / alive.sum()
         idx = rng.choice(w.size, size=n, p=w)
-        th = {k: v[idx] for k, v in self.theta.items()}
-        th["log_lambda"] = th["log_lambda"] + (rng.random(n) - 0.5) * self._grid["log_lambda"][1]
-        th["a0"] = th["a0"] * np.exp((rng.random(n) - 0.5) * self._grid["a0"][1])
+        node = {k: v[idx] for k, v in self.theta.items()}
+        th = dict(node)
+        th["log_lambda"] = node["log_lambda"] + (rng.random(n) - 0.5) * self._grid["log_lambda"][1]
+        th["a0"] = node["a0"] * np.exp((rng.random(n) - 0.5) * self._grid["a0"][1])
+        if N is not None:                          # a jitter must not move a surviving draw past failure
+            dead = self.forward.rul(th["a0"], th) <= N
+            for k in ("log_lambda", "a0"):
+                th[k] = np.where(dead, node[k], th[k])
         return th
 
     def summary(self):

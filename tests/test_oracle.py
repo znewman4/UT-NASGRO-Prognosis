@@ -69,3 +69,21 @@ def test_frozen_predictions_match_stored_results(ns):
             got = np.mean([r["reduction"]["crack depth"] for r in rows if r["config"] == "standard"
                            and r["case"] == case and r["depth_mm"] == float(depth)])
             assert got == pytest.approx(want, abs=6e-4), (case, depth)
+
+
+@pytest.mark.parametrize("case", ["bar", "plate"])
+def test_current_practice_reproduces_the_study_sizing_sweep(ns, case):
+    """static_mc given a reading exactly at 1 mm reproduces the study: sd 0.5 mm is its baseline,
+    sd 0.5/3 mm its Appendix A 'x1/3' level (P1.2), on the same random numbers."""
+    from utprog.estimators.likelihood import NoiseModel
+    from utprog.estimators.study_mc import StaticMC
+    from utprog.sensors.base import Observation
+    sweeps = json.loads((ns.path / "results/2026-10-23_nasgro_only/sweeps.json").read_text())["results"]
+    levels = {lv["level"]: lv for x in sweeps if x["case"] == case and x["key"] == "depth" for lv in x["levels"]}
+    for level, sd in (("typical", 0.5e-3), ("x1/3", 0.5e-3 / 3)):
+        est = StaticMC(case, NoiseModel(sd_abs=sd), n=10000, seed=1)
+        est.reset()
+        est.update(Observation(0.0, "sized", 1e-3))
+        x = est.forecast(0.0, 0, None)
+        assert u90_finite(x) == pytest.approx(levels[level]["u90"], abs=1e-9), level
+        assert np.isfinite(x).mean() == pytest.approx(levels[level]["pf"], abs=1e-12), level
