@@ -1,0 +1,11 @@
+# 01b · M1 on the round bar (25CrMo4, D 18 mm, R -1, 250 MPa). Small bar cracks
+# often arrest at threshold (Pf 73 % at 0.5 mm in the study); arrested specimens
+# are counted in specimens.csv and left out of the RUL scores.
+extends: 01_depth_only.yaml
+experiment: 01b_depth_only_bar
+truth:
+  case: bar
+variants:
+  a0.5mm: {truth: {a_start: {median_mm: 0.5}}}
+  a1mm: {}
+  a2mm: {truth: {a_start: {median_mm: 2.0}}}

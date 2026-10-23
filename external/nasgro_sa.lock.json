@@ -1,0 +1,21 @@
+{
+  "repo": "https://github.com/znewman4/NASGRO-Sensitivity-Analysis",
+  "commit": "7bf96977d8557badd49c7f08607d648605caaeaf",
+  "package": "nasgro_scenarios",
+  "note": "nasgro_scenarios is the rebuilt nasgro_sa pipeline (see its README). Hashes are SHA-256 with CRLF normalised to LF.",
+  "sha256": {
+    "nasgro_scenarios/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "nasgro_scenarios/cases.py": "36d391e9068952c1a16a0f4ed4c06edd5caeb2e802fd5b193b63340e61fb5189",
+    "nasgro_scenarios/geometry.py": "af20fe225e65e6313216e98586b54eba67edec6c57cfe49dd3fcd219370b48c3",
+    "nasgro_scenarios/life.py": "30627b0f44a2b14f43dab9aac28a144ebfc851f99b0a0634f71a47ff3ed46760",
+    "nasgro_scenarios/mixed_mode.py": "df8772e943997ec7303c9df2b24f9767e8b4847884bc61acd1ef476906371de7",
+    "nasgro_scenarios/nasgro.py": "a66cd0a9e483aba8009dd636f132e61a91c18d6df96e026b13c190d43ebfcb7a",
+    "nasgro_scenarios/residual_stress.py": "9cf1bed8b50f89c40d6512370e8644df5d904475d0a2707343b2787e9f11642a",
+    "nasgro_scenarios/runner.py": "6163fd04facf747fd6113e1cadf81d79254a4797d13a703f66c722c99e553df1",
+    "nasgro_scenarios/variable_amplitude.py": "a46293a2d9dd499b73da158c3c38d22884f3c524c328b0f94adb889863ce67fa",
+    "results/baseline.json": "6ee46f2b665397f482f7ecfc4ea360d8bb5035d6dc934122a950a1516100d424",
+    "results/2026-10-23_nasgro_only/rankings.json": "67579d261d965bf46c3ee46e02fcf7616f36473173de312cb5cc82ed2676b089",
+    "results/mixed_mode_step1.json": "81f036a7eaf30bd15db3a9d9d414abb2944810b203221f74bf0d1c6258df8374",
+    "results/residual_stress.json": "3acac013a71e795fe1b838e13a5b27149c16dfbb7a0ea3ee19a016f17cc40388"
+  }
+}

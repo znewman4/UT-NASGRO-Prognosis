@@ -1,0 +1,51 @@
+# 00 · Toy: closed-form Paris growth, depth-only sensor.
+# The estimator is exactly well-specified here (truth drawn from its own prior),
+# so coverage and simulation-based calibration must hold. Checks the machinery
+# before NASGRO is involved.
+experiment: 00_toy
+seed: 20261023
+n_specimens: 400
+workers: 4
+time_grid_frac: 0.001            # sensor time grid, fraction of the nominal life
+
+truth:
+  kind: toy
+  toy: {C: 1.0e-11, m: 3.0, dS_MPa: 100.0, Y: 1.12, a_c_mm: 10.0}
+  a_start: {median_mm: 1.0, cov: 0.3, trunc: 4.0}
+  log_lambda: {mu: 0.0, sd: 0.4}
+
+prior:
+  log_lambda: {mu: 0.0, sd: 0.4}
+  a0: same_as_truth
+
+sensors:
+  sd0.1: {sd_abs_mm: 0.1}
+  sd0.5: {sd_abs_mm: 0.5}
+
+policies:
+  none: {kind: none}
+  one_off: {kind: one_off, at: 0.0}
+  periodic_0.2: {kind: periodic, T_frac: 0.2}
+  continuous: {kind: continuous, dt_frac: 0.01}
+
+estimators:
+  grid: {kind: grid, n_lambda: 121, n_a0: 61}
+  pf: {kind: particle_filter, n_particles: 2000}
+
+arms:
+  product:
+    sensor: [sd0.1, sd0.5]
+    policy: [none, one_off, periodic_0.2, continuous]
+    estimator: [grid]
+  list:
+    pf_check: {sensor: sd0.1, policy: periodic_0.2, estimator: pf}
+
+scoring:
+  n_random: 4
+  frac_max: 0.95
+  fixed_fractions: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+  n_samples: 2000
+  alpha_rel: 0.2
+  alpha_abs: 0.05
+  beta: 0.5
+  sbc_draws: 99

@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "utprog"
+version = "0.1.0"
+description = "Virtual test bed: does repeated ultrasonic crack sizing improve a NASGRO remaining-life forecast?"
+requires-python = ">=3.10"
+# Exact pins: a run is reproducible from one config, a git commit and a seed.
+dependencies = [
+  "numpy==2.1.3",
+  "scipy==1.14.1",
+  "pandas==2.2.3",
+  "pyyaml==6.0.2",
+  "matplotlib==3.9.2",
+  "tabulate==0.9.0",
+]
+
+[project.optional-dependencies]
+test = ["pytest==8.3.3"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["slow: Monte Carlo checks that take minutes (run with -m slow)"]
+
+# The validated NASGRO pipeline is a git submodule pinned by commit and checked
+# file by file against external/nasgro_sa.lock.json on every import.
+[tool.utprog.nasgro_sa]
+repo = "https://github.com/znewman4/NASGRO-Sensitivity-Analysis"
+commit = "7bf96977d8557badd49c7f08607d648605caaeaf"
+path = "external/nasgro_sa"
+lock = "external/nasgro_sa.lock.json"

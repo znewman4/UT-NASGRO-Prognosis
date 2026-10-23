@@ -1,0 +1,38 @@
+# 02 · M1, Approach 4: when does continuous monitoring beat periodic inspection, per unit cost?
+# Each arm runs the decision rule (act when P(failure before the next planned
+# reading + lead) >= p_act) and the forecasts are also scored at random times.
+# POD after MIL-HDBK-1823A (sensor_common); planning after Straub & Faber (2006).
+# Costs are in units of one repair = 1 and a nominal life = 1. PLACEHOLDERS.
+extends: 01_depth_only.yaml
+experiment: 02_intervals
+n_specimens: 300
+
+policies:
+  periodic_0.05: {kind: periodic, T_frac: 0.05}
+  periodic_0.1: {kind: periodic, T_frac: 0.1}
+  periodic_0.2: {kind: periodic, T_frac: 0.2}
+  continuous: {kind: continuous, dt_frac: 0.005}
+
+arms:
+  product:
+    sensor: [sd0.05, sd0.1, sd0.2, sd0.3, sd0.5]
+    policy: [periodic_0.05, periodic_0.1, periodic_0.2, continuous]
+    estimator: [grid]
+
+decision:
+  enabled: true
+  p_act: [0.001, 0.01, 0.05]
+  lead_frac: 0.01                # time to arrange a repair, fraction of the nominal life
+  n_samples: 1000
+
+costs:                           # PLACEHOLDERS to agree with supervisors
+  periodic: {per_reading: 0.05}
+  continuous: {per_reading: 0.0}
+  repair: 1.0
+  failure: 50.0
+  unused_per_life: 2.0           # value of service life given up by acting early
+  monitoring_per_life_levels: [0.1, 0.25, 0.5, 1.0, 2.0]
+
+variants:
+  a1mm: {}
+  a0.5mm: {truth: {a_start: {median_mm: 0.5}}}
