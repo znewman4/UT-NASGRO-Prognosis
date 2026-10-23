@@ -1,0 +1,29 @@
+# E-03c · Approach 2: LCR layer averages of residual stress, alone and with the depth record.
+# Question: what LCR error makes presence and sign resolvable, and how much sooner than depth alone?
+# One survey at installation (layers 1, 2, 4, 6 mm, as Javadi et al.'s 5 to 1 MHz). Error per layer
+# swept 10-80 MPa (Javadi et al.: agreement with FE within about +-40 MPa) plus a shared 20 MPa
+# offset per survey for uncompensated temperature or reference error. PLACEHOLDERS.
+# "sd0.2+lcrX" with policy none uses the survey alone; with periodic_0.1 the survey plus depth.
+extends: 03_residual_stress.yaml
+experiment: 03c_residual_lcr
+
+sensors:
+  lcr10: {type: lcr, sd_MPa: 10.0, drift_sd_MPa: 20.0, layer_depths_mm: [1.0, 2.0, 4.0, 6.0], at_frac: [0.0]}
+  lcr20: {type: lcr, sd_MPa: 20.0, drift_sd_MPa: 20.0, layer_depths_mm: [1.0, 2.0, 4.0, 6.0], at_frac: [0.0]}
+  lcr40: {type: lcr, sd_MPa: 40.0, drift_sd_MPa: 20.0, layer_depths_mm: [1.0, 2.0, 4.0, 6.0], at_frac: [0.0]}
+  lcr80: {type: lcr, sd_MPa: 80.0, drift_sd_MPa: 20.0, layer_depths_mm: [1.0, 2.0, 4.0, 6.0], at_frac: [0.0]}
+
+arms:
+  products:
+    filter:
+      sensor: [sd0.2, sd0.2+lcr10, sd0.2+lcr20, sd0.2+lcr40, sd0.2+lcr80]
+      policy: [none, periodic_0.1]
+      estimator: [bf]
+    well_specified:
+      sensor: [sd0.2, sd0.2+lcr20, sd0.2+lcr40, sd0.2+lcr80]
+      policy: [none, periodic_0.1]
+      estimator: [is]
+
+variants:
+  a0.5mm: {truth: {a_start: {median_mm: 0.5}}}
+  a1mm: {}

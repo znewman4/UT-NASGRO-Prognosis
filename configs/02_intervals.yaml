@@ -1,11 +1,19 @@
-# 02 · M1, Approach 4: when does continuous monitoring beat periodic inspection, per unit cost?
-# Each arm runs the decision rule (act when P(failure before the next planned
-# reading + lead) >= p_act) and the forecasts are also scored at random times.
-# POD after MIL-HDBK-1823A (sensor_common); planning after Straub & Faber (2006).
-# Costs are in units of one repair = 1 and a nominal life = 1. PLACEHOLDERS.
+# E-02 · Approach 3 (intervals): when does continuous monitoring beat periodic inspection, per unit cost?
+# Prediction (docs/predictions.md, P3.1): undetected crack state leads U90 below 1 mm. The study makes no
+# interval prediction, so the reference here is a perfect-inspection arm (exact sizing, certain detection)
+# and a perfect-information oracle (true depth and growth rate) running the same decision rule.
+# Each arm acts when P(failure before the next planned reading + lead) >= p_act (after Straub & Faber 2006);
+# POD follows MIL-HDBK-1823A (sensor_common). Robustness arms: a biased sensor the filter does not know
+# about, and a bonded array that fails silently part-way through life.
+# Costs are in units of one repair = 1 and one nominal life = 1. PLACEHOLDERS.
 extends: 01_depth_only.yaml
 experiment: 02_intervals
 n_specimens: 300
+
+sensors:
+  perfect: {sd_abs_mm: 0.001, pod_a50_mm: 0.0, pod_a90_mm: 0.0, a_floor_mm: 0.0, a_size_min_mm: 0.0}
+  biased0.2: {sd_abs_mm: 0.2, bias_mean_mm: -0.1}                  # undersizes by 0.1 mm
+  bond0.2: {sd_abs_mm: 0.2, dropout: {median_frac: 0.4, cov: 0.5}} # array de-bonds silently (An et al.)
 
 policies:
   periodic_0.05: {kind: periodic, T_frac: 0.05}
@@ -13,11 +21,35 @@ policies:
   periodic_0.2: {kind: periodic, T_frac: 0.2}
   continuous: {kind: continuous, dt_frac: 0.005}
 
+estimators:
+  grid_unaware: {kind: grid, n_lambda: 121, n_a0: 61, noise_override: {bias_mean_mm: 0.0}}
+  oracle_decide: {kind: study_mc, known: [depth, lambda], n: 500, score_kinds: [depth]}   # smaller n: forecasts at every reading
+
 arms:
-  product:
-    sensor: [sd0.05, sd0.1, sd0.2, sd0.3, sd0.5]
-    policy: [periodic_0.05, periodic_0.1, periodic_0.2, continuous]
-    estimator: [grid]
+  products:
+    filter:
+      sensor: [sd0.05, sd0.1, sd0.2, sd0.3, sd0.5, perfect]
+      policy: [periodic_0.05, periodic_0.1, periodic_0.2, continuous]
+      estimator: [grid]
+    well_specified:
+      sensor: [sd0.2, sd0.5]
+      policy: [periodic_0.1, periodic_0.2]
+      estimator: [is]
+    biased:
+      sensor: [biased0.2]
+      policy: [periodic_0.1, continuous]
+      estimator: [grid, grid_unaware]
+    bond:
+      sensor: [bond0.2]
+      policy: [continuous]
+      estimator: [grid]
+  list:
+    oracle_periodic_0.1: {sensor: sd0.2, policy: periodic_0.1, estimator: oracle_decide}
+    oracle_continuous: {sensor: sd0.2, policy: continuous, estimator: oracle_decide}
+    study_baseline: {sensor: sd0.5, policy: none, estimator: study_baseline}
+    oracle_depth: {sensor: sd0.5, policy: none, estimator: oracle_depth}
+    oracle_depth_lambda: {sensor: sd0.5, policy: none, estimator: oracle_depth_lambda}
+    oracle_state_lambda: {sensor: sd0.5, policy: none, estimator: oracle_state_lambda}
 
 decision:
   enabled: true
@@ -32,7 +64,13 @@ costs:                           # PLACEHOLDERS to agree with supervisors
   failure: 50.0
   unused_per_life: 2.0           # value of service life given up by acting early
   monitoring_per_life_levels: [0.1, 0.25, 0.5, 1.0, 2.0]
+  failure_levels: [10.0, 50.0, 200.0]      # break-even is recomputed for each
 
 variants:
   a1mm: {}
-  a0.5mm: {truth: {a_start: {median_mm: 0.5}}}
+  a0.5mm: {truth: {a_start: {median_mm: 0.5}}, scoring: {at_depths_mm: [1.0, 2.0]}}
+  a0.2mm:                        # below detection: the regime the prediction is about
+    truth: {a_start: {median_mm: 0.2}}
+    scoring: {at_depths_mm: [0.5, 1.0, 2.0]}
+  a1mm_mismatched:
+    truth: {extended: true, variability: {sd: 0.2, corr_log_a: 0.5}}

@@ -94,10 +94,19 @@ class CurveModel(ForwardModel):
     def _groups(self, theta, n):
         if not self.axes:
             return [(self.curve(()), slice(None))]
-        psi = np.column_stack([np.broadcast_to(np.asarray(theta[k], float), (n,)) for k in self.axes])
-        uniq, inv = np.unique(psi, axis=0, return_inverse=True)
+        if "_groups" in theta:                    # precomputed by the caller (GridBayes knows its grid nodes)
+            return [(self.curve(psi), idx) for psi, idx in theta["_groups"]]
+        if len(self.axes) == 1:
+            x = np.broadcast_to(np.asarray(theta[self.axes[0]], float), (n,))
+            uniq, inv = np.unique(x, return_inverse=True)
+            uniq = uniq[:, None]
+        else:
+            psi = np.column_stack([np.broadcast_to(np.asarray(theta[k], float), (n,)) for k in self.axes])
+            uniq, inv = np.unique(psi, axis=0, return_inverse=True)
         inv = np.asarray(inv).reshape(-1)
-        return [(self.curve(tuple(u)), np.flatnonzero(inv == j)) for j, u in enumerate(uniq)]
+        order = np.argsort(inv, kind="stable")
+        bounds = np.searchsorted(inv[order], np.arange(len(uniq) + 1))
+        return [(self.curve(tuple(u)), order[bounds[j]:bounds[j + 1]]) for j, u in enumerate(uniq)]
 
     def _apply(self, method, a, other, theta):
         a, other, lam = np.broadcast_arrays(np.asarray(a, float), np.asarray(other, float),

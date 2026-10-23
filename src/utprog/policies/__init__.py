@@ -5,6 +5,7 @@
     periodic(T)        every T cycles from `offset`
     continuous(dt)     every dt cycles (a permanently installed sensor)
     event_triggered    a base policy plus a burst of readings after each load event
+    window(n, span)    n readings spread evenly over the first `span` of life (check B's design)
 
 Spacings are given in cycles or as a fraction of the nominal life (`*_frac`)
 and snapped to the sensor time grid, so readings of different arms at the same
@@ -32,7 +33,7 @@ class Policy:
         return t[(t >= 0.0) & (t < h)]
 
     def next_after(self, N, specimen, ctx):
-        t = snap(self.schedule(specimen, ctx, N + ctx["horizon"]), ctx["grid"])
+        t = snap(self.schedule(specimen, ctx, N + ctx.get("lookahead", ctx["horizon"])), ctx["grid"])
         t = t[t > N]
         return float(t[0]) if t.size else np.inf
 
@@ -74,6 +75,16 @@ class Continuous(Policy):
         return np.arange(0.0, horizon, self.dt)
 
 
+class Window(Policy):
+    kind = "window"
+
+    def __init__(self, n, span):
+        self.n, self.span = int(n), float(span)
+
+    def schedule(self, specimen, ctx, horizon):
+        return np.linspace(0.0, self.span, self.n) if self.n > 1 else np.zeros(1)
+
+
 class EventTriggered(Policy):
     kind = "event_triggered"
 
@@ -111,6 +122,8 @@ def from_config(spec, ctx):
         return Periodic(_cycles(spec, "T", ctx), _cycles(spec, "offset", ctx, spacing=False, default=0.0))
     if kind == "continuous":
         return Continuous(_cycles(spec, "dt", ctx))
+    if kind == "window":
+        return Window(spec["n"], _cycles(spec, "span", ctx, spacing=False))
     if kind == "event_triggered":
         return EventTriggered(from_config(spec["base"], ctx), spec.get("burst", 5), _cycles(spec, "dt", ctx))
     raise ValueError(f"unknown policy {kind}")

@@ -8,7 +8,7 @@ from utprog import _external
 
 def test_pinned_pipeline_matches_lock():
     lk = _external.verify()
-    assert lk["commit"] == "7bf96977d8557badd49c7f08607d648605caaeaf"
+    assert lk["commit"] == "28f217cea555d26b76c6e940ce4b7309f7f514cd"
 
 
 def test_imported_modules_are_the_verified_copy(ns):

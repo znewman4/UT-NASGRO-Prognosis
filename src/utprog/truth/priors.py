@@ -34,15 +34,25 @@ def all_inputs():
     return tuple(sorted(set(c.BAR_INPUTS.values()) | set(c.PLATE_INPUTS.values()) | {"material", "Cn"}))
 
 
-def sample_inputs(case, n, seed, nominal=None, spread=None, fixed=()):
-    """n draws of every NASGRO input (depth is set separately by the caller)."""
-    fx = DEPTH_ONLY_FIXED + ("depth",) + tuple(fixed)
+def sample_inputs(case, n, seed, nominal=None, spread=None, fixed=(), extended=False):
+    """n draws of every NASGRO input (depth is set separately by the caller).
+
+    extended=True also leaves kappa and the SIF error uncertain: a truth with closure and
+    K behaviour the NASGRO-only estimators do not model (the mismatched-truth variant).
+    """
+    fx = ("tilt",) if extended else DEPTH_ONLY_FIXED
+    fx = fx + ("depth",) + tuple(fixed)
     return nasgro().cases.sample(case, 1e-3, n, seed=int(seed), fixed=fx, spread=spread, nominal=nominal)
 
 
 def nominal_inputs(case, nominal=None):
     """One sample with every input at its nominal value."""
     return sample_inputs(case, 1, seed=0, nominal=nominal, fixed=all_inputs())
+
+
+def depth_prior(d):
+    """InitialDepth (lognormal) or StudyDepth (the study's sizing model) from a config entry."""
+    return StudyDepth.from_config(d) if d.get("dist") == "study" else InitialDepth.from_config(d)
 
 
 @dataclass(frozen=True)
@@ -96,6 +106,53 @@ class InitialDepth:
             z = np.log(a / self.median) / self.s
             out = stats.norm.logpdf(z) - np.log(self.s * a) - np.log(ph - pl)
         return np.where((a >= self.lo) & (a <= self.hi), out, -np.inf)
+
+
+@dataclass(frozen=True)
+class StudyDepth:
+    """The sensitivity study's UT-sized depth: normal(median, sd), reflected at 20 um
+    (as nasgro_scenarios.cases._depth for a sized crack). Same interface as InitialDepth."""
+    median: float          # m
+    sd: float              # m
+    floor: float = 2e-5
+
+    @classmethod
+    def from_config(cls, d):
+        return cls(float(d["median_mm"]) * 1e-3, float(d["sd_mm"]) * 1e-3)
+
+    @property
+    def known(self):
+        return self.sd <= 0.0
+
+    @property
+    def lo(self):
+        return self.floor if not self.known else self.median
+
+    @property
+    def hi(self):
+        return self.median + 6.0 * self.sd
+
+    def sample(self, rng, n=None):
+        x = self.median + self.sd * rng.standard_normal(n)
+        return np.where(x > self.floor, x, self.floor + np.abs(x - self.floor))
+
+    def logpdf(self, a):
+        a = np.asarray(a, float)
+        if self.known:
+            return np.where(a == self.median, 0.0, -np.inf)
+        pdf = (stats.norm.pdf(a, self.median, self.sd)
+               + stats.norm.pdf(2.0 * self.floor - a, self.median, self.sd))
+        with np.errstate(divide="ignore"):
+            return np.where(a > self.floor, np.log(pdf), -np.inf)
+
+    def ppf(self, q):
+        q = np.asarray(q, float)
+        if self.known:
+            return np.full(q.shape, self.median)
+        a = np.linspace(self.floor, self.hi, 4001)
+        cdf = (stats.norm.cdf(a, self.median, self.sd) - stats.norm.cdf(2.0 * self.floor - a, self.median, self.sd))
+        cdf = (cdf - cdf[0]) / (cdf[-1] - cdf[0])
+        return np.interp(q, cdf, a)
 
 
 def _cache_path(cache_dir, spec):

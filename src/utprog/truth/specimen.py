@@ -34,6 +34,7 @@ class Specimen:
     label: str = ""             # e.g. the residual-stress class
     events: np.ndarray = field(default_factory=lambda: np.empty(0))
     depth_fn: object = None     # exact a(N) where available (toy)
+    time_fn: object = None      # exact N(a) where available (toy)
 
     @property
     def arrested(self):
@@ -45,10 +46,20 @@ class Specimen:
             return self.depth_fn(N)
         return np.exp(np.interp(N, self.curve_N, self.curve_log_a))
 
+    def time_at_depth(self, a):
+        """Cycle at which the true crack reaches depth a; nan if it starts deeper or never gets there."""
+        if a <= self.a0 or a >= self.a_fail:
+            return np.nan
+        if self.time_fn is not None:
+            return float(self.time_fn(a))
+        if a > np.exp(self.curve_log_a[-1]):
+            return np.nan                                # arrests first
+        return float(np.interp(np.log(a), self.curve_log_a, self.curve_N))
+
 
 class NasgroTruth:
     def __init__(self, case, a_start, nominal=None, spread=None, rs_classes=None, variability=None,
-                 n_grid=1000, lambda_interval=None):
+                 n_grid=1000, lambda_interval=None, extended=False):
         """rs_classes: {name: (probability, scenario dict or None)}; variability: {sd, corr_log_a}."""
         self.case, self.a_start = case, a_start
         self.nominal, self.spread = dict(nominal or {}), spread or None
@@ -61,6 +72,7 @@ class NasgroTruth:
         v = variability or {}
         self.var_sd, self.var_corr = float(v.get("sd", 0.0)), float(v.get("corr_log_a", 0.5))
         self.lambda_interval = lambda_interval
+        self.extended = bool(extended)
         self._n_ref = None
         if lambda_interval is not None:
             nom = priors.nominal_inputs(case, self.nominal)
@@ -72,7 +84,7 @@ class NasgroTruth:
         a0 = float(self.a_start.sample(rng))
         u_class = rng.random()
         z_path = rng.standard_normal(self.n_grid)
-        s = priors.sample_inputs(self.case, 1, seed, self.nominal, self.spread)
+        s = priors.sample_inputs(self.case, 1, seed, self.nominal, self.spread, extended=self.extended)
         s["a_i"] = np.array([a0])
         label, kfn = "", None
         if self.class_names:
@@ -110,5 +122,8 @@ class ToyTruth:
 
         def depth(N):
             return model.advance(a0, N, {"log_lambda": log_lam})
+
+        def time(a):
+            return life - float(model.rul(np.array([a]), th)[0])
         return Specimen(index=index, case="toy", a0=a0, life=life, a_fail=model.a_c,
-                        truth_theta=dict(log_lambda=log_lam, a0=a0), depth_fn=depth)
+                        truth_theta=dict(log_lambda=log_lam, a0=a0), depth_fn=depth, time_fn=time)

@@ -14,6 +14,11 @@ Parameter values and their sources are in docs/assumptions.md. The same
 NoiseModel is the estimators' likelihood (estimators/likelihood.py), so an
 estimator is well-specified unless its config overrides the noise.
 
+Bond failure (optional, `dropout`): a permanently bonded array stops reporting
+at a random time T_b, lognormal with median `median_frac` x nominal life and
+CoV `cov` (An et al. lost a bonded array after about 10,000 cycles). The loss is
+silent: later readings simply never arrive, and the estimator is not told.
+
 Common random numbers: the bias draw, the detection uniforms and the error
 field are generated on a fixed time grid (spacing `grid` cycles, up to the
 specimen's life) from three child streams of the specimen's sensor seed. Arms
@@ -40,13 +45,24 @@ def ou_field(z, rho):
 class DepthSensor(Sensor):
     channel = "depth"
 
-    def __init__(self, noise: NoiseModel, grid, horizon):
+    def __init__(self, noise: NoiseModel, grid, horizon, dropout=None, n_nominal=None):
         self.noise = noise
         self.grid = float(grid)
         self.horizon = float(horizon)       # field length for specimens that never fail
+        self.dropout = None
+        if dropout:
+            cov = float(dropout.get("cov", 0.0))
+            self.dropout = (float(dropout["median_frac"]) * float(n_nominal), np.sqrt(np.log1p(cov ** 2)))
+
+    def failure_time(self, seed):
+        if self.dropout is None:
+            return np.inf
+        med, s = self.dropout
+        return med * float(np.exp(s * np.random.default_rng(child(seed, 3)).standard_normal()))
 
     def observe(self, specimen, times, seed):
         times = np.asarray(times, float)
+        times = times[times < self.failure_time(seed)]
         if times.size == 0:
             return []
         nz = self.noise

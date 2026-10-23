@@ -12,6 +12,15 @@ class Observation:
     channel: str = "depth"
 
 
+@dataclass(frozen=True)
+class StressObservation:
+    N: float
+    values: tuple               # layer-average residual stress (MPa), one per layer
+    depths: tuple               # layer depth sampled by each frequency (m)
+    kind: str = "stress"
+    channel: str = "stress"
+
+
 class Sensor:
     channel = ""
 

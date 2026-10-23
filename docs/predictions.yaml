@@ -1,0 +1,127 @@
+# Frozen sensitivity-study predictions, in a form the simulation tests.
+# Written before any simulation run. Change only with a dated entry in docs/decisions.md.
+#
+# Common definitions (rebuild engine, "standard" = NASGRO-equation inputs only):
+#   U90        log10(N95 / N05) over sampled cracks that fail (nasgro_scenarios.life.u90)
+#   reduction  1 - U90(input fixed) / U90(all inputs at industrial spread), same random numbers
+#   spreads    nasgro_scenarios.cases (sized depth sd 0.5 mm from 1 mm; lognormal CoV 0.6 below 1 mm;
+#              kappa and SIF error fixed at 1; tilt uncertain, sd 5 deg sized / 15 deg undetected)
+#   samples    n = 10,000 per run; "mean" = mean of seeds 1-5, [min, max] over the seeds
+# The study fixes an input at its nominal value; the oracle arms fix it at the specimen's true value.
+# At a nominal specimen the two coincide (tests/test_oracle.py checks it to 1e-9).
+
+engines:
+  rebuild:
+    repo: https://github.com/znewman4/NASGRO-Sensitivity-Analysis
+    commit: 28f217cea555d26b76c6e940ce4b7309f7f514cd   # = 7bf9697 code + VA results; pinned in external/
+    results: results/2026-10-23_nasgro_only
+    reproducible: true
+  original:
+    repo: https://github.com/znewman4/NASGRO-Sensitivity-Analysis
+    commit: f9a6555 (branch main, package nasgro_sa)
+    note: >-
+      Checks A and B on the scoping page were rerun on the original pipeline with kappa and the SIF error
+      fixed at 1. No commit contains that rerun or its scripts, so these numbers cannot be regenerated, and
+      the original pipeline's scatter differs from the rebuild's (sigma log10 N 0.27 vs 0.36 on the bar).
+      Compare them with the simulation as ratios, not absolute U90.
+    reproducible: false
+
+predictions:
+  P1.1:
+    approach: 1
+    statement: Knowing crack depth exactly removes 30 % (plate) and 40 % (bar) of U90 at 1 mm
+    engine: rebuild
+    source: rankings.json, config standard, input "crack depth"
+    metric: u90_reduction
+    known: [depth]
+    values:
+      plate: {0.2: 0.111, 0.5: 0.189, 1.0: 0.303, 2.0: 0.137, 4.0: 0.070}
+      bar: {0.5: 0.252, 1.0: 0.400, 2.0: 0.315, 4.0: 0.238}
+    seed_range:
+      plate: {0.2: [0.106, 0.120], 0.5: [0.180, 0.199], 1.0: [0.292, 0.314], 2.0: [0.126, 0.153], 4.0: [0.062, 0.079]}
+      bar: {0.5: [0.230, 0.273], 1.0: [0.389, 0.408], 2.0: [0.304, 0.324], 4.0: [0.232, 0.252]}
+    baseline_u90:
+      plate: {0.2: 1.047, 0.5: 1.194, 1.0: 1.230, 2.0: 1.082, 4.0: 1.219}
+      bar: {0.5: 1.250, 1.0: 1.130, 2.0: 0.927, 4.0: 0.856}
+    tested_by: [E-01 consistency (oracle_depth vs study_baseline), E-01b consistency]
+  P1.2:
+    approach: 1
+    statement: Sizing to a third of the UT error (0.17 mm sd) captures most of the depth benefit
+    engine: rebuild
+    source: sweeps.json, input depth, seed 1, 1 mm
+    metric: u90 at sizing sd (study's static definition)
+    values:
+      bar: {sd_0.5: 1.112, sd_0.167: 0.756, sd_0.017: 0.675}     # 82 % of the exact-depth reduction at 0.167 mm
+      plate: {sd_0.5: 1.243, sd_0.167: 0.917, sd_0.017: 0.862}   # 86 %
+    tested_by: [E-01 sd0.17 arms against oracle_depth at 1 mm]
+  P1.3:
+    approach: 1
+    statement: With crack state exact, the lumped growth-rate group lambda holds 62-84 % of the original U90
+    engine: original
+    source: scoping page, check A (plate 62-81 %, bar 79-84 % including the material fit)
+    metric: u90_reduction
+    known: [depth, ac, lambda]   # bar: [depth, lambda]
+    values: {plate: [0.62, 0.81], bar: [0.79, 0.84]}
+    tested_by: [E-01 consistency (oracle_state_lambda), E-01b consistency (oracle_state_lambda)]
+    caveat: original pipeline; the oracle recomputes it on the rebuild, and any difference is reported, not tuned away
+  P1.4:
+    approach: 1
+    statement: Ten sizings at 0.1 mm cut forecast U90 by 30-40 % against one sizing; at 0.5 mm repeating adds ~10 %
+    engine: original
+    source: scoping page, check B chart (forecast after sizing over ~20 % of life, from 1 mm)
+    metric: u90 after the sizing window
+    values:   # [1 sizing, 2 sizings, 10 sizings]
+      plate: {sd_0.5: [0.868, 0.874, 0.782], sd_0.2: [0.679, 0.625, 0.541], sd_0.1: [0.641, 0.482, 0.385], sd_0.15+0.15: [0.684, 0.567, 0.479]}
+      bar: {sd_0.5: [0.675, 0.679, 0.605], sd_0.2: [0.516, 0.484, 0.437], sd_0.1: [0.484, 0.409, 0.335], sd_0.15+0.15: [0.517, 0.457, 0.389]}
+      reduction_10_vs_1: {plate: {sd_0.1: 0.40, sd_0.5: 0.10}, bar: {sd_0.1: 0.31, sd_0.5: 0.10}}
+    tested_by: [E-01 checkB (is = same-model filter, as check B; grid = practical filter)]
+    caveat: original pipeline, and "the true crack was drawn from the same model" (an optimistic bound)
+  P2.1:
+    approach: 2
+    statement: Residual-stress presence and sign change small-crack life by about x2 and decide whether small cracks grow
+    engine: rebuild
+    source: residual_stress.json (NASGRO-only), seed 1
+    metric: change in median log10 life against no residual stress; share of cracks that grow (Pf)
+    values:
+      plate_weld: {0.2: -0.336, 0.5: -0.331, 1.0: -0.257, 2.0: -0.173, 4.0: -0.053}
+      bar_tensile: {0.5: -0.396, 1.0: -0.269, 2.0: -0.129, 4.0: -0.003}
+      pf_plate_weld_0.2: [0.804, 0.993]
+      pf_bar_tensile_0.5: [0.727, 0.981]
+      pf_bar_compressive_0.5: [0.727, 0.358]
+    tested_by: [E-03 (oracle_depth vs oracle_depth_class: bias of a class-blind forecast; bf and is classification), E-03c]
+  P2.2:
+    approach: 2
+    statement: Given the class, residual-stress amplitude and decay length are each worth 7 % of U90 or less
+    engine: rebuild
+    source: residual_stress.json; max over scenarios and depths (bar_tensile decay length 6.9 % at 1 mm)
+    metric: u90_reduction
+    known: [depth, rs_class, rs_params]
+    reference: [depth, rs_class]
+    values: {max: 0.07}
+    tested_by: [E-03 oracle_depth_rs vs oracle_depth_class]
+  P3.1:
+    approach: 3
+    statement: Undetected crack state leads U90 below 1 mm (no interval prediction exists)
+    engine: rebuild
+    source: rankings.json standard; depth spread lognormal CoV 0.6 below 1 mm
+    metric: u90_reduction
+    known: [depth]
+    values: {plate: {0.2: 0.111, 0.5: 0.189}, bar_0.5: {crack_depth: 0.252, material_fit: 0.264}}
+    tested_by: [E-02 a0.2mm and a0.5mm (perfect-inspection and oracle arms as the reference)]
+  P4.1:
+    approach: 4
+    statement: alpha is worth <= 4 % of U90 (5-12 % if its spread doubles); a rate learned at R = 0.1 leaves U90 1.9 after R rises to 0.5
+    engine: rebuild (alpha), original (R change)
+    values: {plate_alpha: [0.032, 0.040], plate_alpha_x2: [0.080, 0.125], bar_alpha_x2: [0.046, 0.091], u90_after_R_change_4mm_plate: 1.9}
+    tested_by: [E-04 (second round, not built)]
+  P5.1:
+    approach: 5
+    statement: Tilt <= 1 % once sized to +-5 deg; 8-16 % at 4 mm if inclined and unsized
+    engine: rebuild
+    source: mixed_mode.json, prior inclined (30 deg)
+    values: {bar_4mm: {unsized: 0.157, sized: 0.015}, plate_4mm: {unsized: 0.083, sized: 0.010}}
+    tested_by: [E-05 (second round, not built)]
+  P6.1:
+    approach: 6
+    statement: none
+    tested_by: []

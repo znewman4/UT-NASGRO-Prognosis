@@ -89,6 +89,9 @@ def main():
         out = REPORTS / exp
         out.mkdir(parents=True, exist_ok=True)
         summary = pd.read_csv(d / "summary.csv")
+        if "kind" in summary:
+            summary = summary[summary["kind"] == "random"]
+        summary = summary[summary["sensor"].isin(m["config"]["sensors"])]       # single-sensor arms in the figure
         cols = ["sensor", "policy", "n", "u90_median", "bias_median", "coverage", "coverage_lo", "coverage_hi",
                 "crps_mean", "last_obs_age_median"]
         header = (f"# {exp} / {variant}\n\nRun `{d.relative_to(ROOT)}`, config hash `{m['config_hash'][:12]}`, "
@@ -97,7 +100,7 @@ def main():
                   f"{m['n_specimens']} specimens ({m['n_arrested']} arrested).\n\n")
         (out / f"{variant}.md").write_text(header + summary[[c for c in cols if c in summary]]
                                            .to_markdown(index=False, floatfmt=".3f") + "\n")
-        sd = {k: v.get("sd_abs_mm") for k, v in m["config"]["sensors"].items()}
+        sd = {k: v.get("sd_abs_mm") for k, v in m["config"]["sensors"].items() if v.get("sd_abs_mm")}
         u90_figure(summary, sd, out / f"{variant}_u90.png", f"{exp} / {variant}")
         cls = ROOT / "results" / "summary" / f"{exp}_{variant}_classification.csv"
         if cls.is_file():

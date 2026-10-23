@@ -17,18 +17,19 @@ from scipy import stats
 from scipy.special import logsumexp
 
 from .base import Estimator, weighted_summary
-from .likelihood import replay
+from .likelihood import replay, stress_loglik
 
 
 class GridBayes(Estimator):
-    def __init__(self, forward, noise, n_lambda=121, n_a0=61, width=5.0, min_cells=4.0, edge_mass=1e-3,
-                 max_lambda_sd=8.0):
+    def __init__(self, forward, noise, n_lambda=121, n_a0=61, width=5.0, min_cells=1.5, edge_mass=1e-3,
+                 max_lambda_sd=8.0, stress_noise=None):
         if n_lambda < 3 or n_a0 < 3:
             raise ValueError("need at least 3 nodes per continuous dimension")
         self.forward, self.noise = forward, noise
         self.n_lambda, self.n_a0 = int(n_lambda), int(n_a0)
         self.width, self.min_cells, self.edge_mass = float(width), float(min_cells), float(edge_mass)
         self.max_lambda_sd = float(max_lambda_sd)
+        self.stress_noise = stress_noise
 
     def reset(self, prior, rng=None):
         self.prior, self.history, self.n_regrid = prior, [], 0
@@ -64,15 +65,38 @@ class GridBayes(Estimator):
         self._index = {d[0]: i for d, i in zip(dims, idx)}
         self._grid = {d[0]: (d[1], d[3]) for d in dims}
         self._ranges = dict(ranges)
-        self.acc = replay(self.noise, self.forward, self.theta, self.history)
+        self._theta_fw = dict(self.theta)
+        axes = tuple(getattr(self.forward, "axes", ()))
+        if axes:                                  # group grid points by table node once per grid
+            key = np.ravel_multi_index([self._index[a] for a in axes], [self._grid[a][0].size for a in axes])
+            order = np.argsort(key, kind="stable")
+            uniq, start = np.unique(key[order], return_index=True)
+            stops = np.append(start[1:], key.size)
+            self._theta_fw["_groups"] = [(tuple(float(self.theta[a][order[s]]) for a in axes), order[s:e])
+                                         for s, e in zip(start, stops)]
+        self.acc = replay(self.noise, self.forward, self._theta_fw, self.history)
+        self.other_ll = np.zeros(self.log_prior.size)
+        for obs in self.history:
+            if obs.channel != "depth":
+                self.other_ll += self._channel_ll(obs)
+
+    def _channel_ll(self, obs):
+        if obs.channel == "stress":
+            if self.stress_noise is None:
+                raise ValueError("a stress reading needs the estimator's stress_noise")
+            return stress_loglik(self.forward.layer_means(self.theta, obs.depths), obs, self.stress_noise)
+        raise ValueError(f"no likelihood for channel {obs.channel}")
 
     def update(self, obs):
         self.history.append(obs)
-        self.acc.update(self.forward.depth_at(obs.N, self.theta), obs)
+        if obs.channel == "depth":
+            self.acc.update(self.forward.depth_at(obs.N, self._theta_fw), obs)
+        else:
+            self.other_ll = self.other_ll + self._channel_ll(obs)
         self._maybe_regrid()
 
     def log_joint(self):
-        return self.log_prior + self.acc.loglik()
+        return self.log_prior + self.acc.loglik() + self.other_ll
 
     def log_evidence(self):
         return float(logsumexp(self.log_joint()))

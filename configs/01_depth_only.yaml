@@ -1,10 +1,14 @@
-# 01 · M1, Approach 1: depth-only test bed on validated NASGRO (plate case).
-# Question: how accurate must sizing be before repeated sizing improves a NASGRO forecast?
-# Deliverable: U90, bias and coverage against sizing sd, spacing and starting size.
+# E-01 · Approach 1 (growth rate): depth-only test bed on validated NASGRO (plate case).
+# Predictions tested (docs/predictions.md, P1.1-P1.4):
+#   exact depth removes 30 % (plate) / 40 % (bar) of U90 at 1 mm; sizing to ~0.17 mm captures most;
+#   lambda holds 62-84 % of the rest (check A); 10 sizings at 0.1 mm cut U90 30-40 % (check B).
+# Three kinds of arm, all on the same specimens and noise:
+#   study_baseline / oracle_*  the sensitivity engine at the true depth (perfect information; sees the truth)
+#   grid                       practical filter: lumped lambda on C, adaptive grid
+#   is                         well-specified filter: importance sampling over full NASGRO inputs
+# Realised fraction = (1 - U90_arm / U90_study_baseline) / predicted reduction, at the same depth.
 #
-# Sensor values marked PLACEHOLDER are to be set from Peng et al. (2018) and
-# Felice et al. (2014) and agreed with the supervisors BEFORE the runs
-# (docs/assumptions.md). Gate thresholds likewise.
+# Values marked PLACEHOLDER are agreed with the supervisors BEFORE the runs (docs/assumptions.md).
 experiment: 01_depth_only
 seed: 20261023
 n_specimens: 500
@@ -18,6 +22,7 @@ truth:
   nominal: {}
   spread: {}
   n_grid: 1000
+  extended: false                # true: kappa and SIF error uncertain in the truth only (mismatched truth)
   variability: {sd: 0.0, corr_log_a: 0.5}
 
 forward:
@@ -30,7 +35,7 @@ prior:
   a0: same_as_truth
 
 sensor_common:                   # PLACEHOLDER values, see docs/assumptions.md
-  sd_rel: 0.0
+  sd_rel: 0.0                    # Peng et al. (2018): <11 % image, <19 % S-matrix on fatigue cracks (01c sweeps it)
   bias_mean_mm: 0.0
   bias_sd_mm: 0.0
   corr_frac: 0.0
@@ -42,6 +47,7 @@ sensor_common:                   # PLACEHOLDER values, see docs/assumptions.md
 sensors:
   sd0.05: {sd_abs_mm: 0.05}
   sd0.1: {sd_abs_mm: 0.1}
+  sd0.17: {sd_abs_mm: 0.167}     # a third of the study's 0.5 mm: "captures most of the depth benefit"
   sd0.2: {sd_abs_mm: 0.2}        # study target
   sd0.3: {sd_abs_mm: 0.3}
   sd0.5: {sd_abs_mm: 0.5}        # typical UT sizing in the sensitivity study
@@ -57,17 +63,35 @@ policies:
 
 estimators:
   grid: {kind: grid, n_lambda: 121, n_a0: 61}
+  is: {kind: nasgro_is, n: 4000, seed: 2}
+  study_baseline: {kind: study_mc, known: [], n: 10000, score_kinds: [depth, time]}   # the study's n; cached per depth
+  oracle_depth: {kind: study_mc, known: [depth], n: 10000, score_kinds: [depth, time]}
+  oracle_depth_lambda: {kind: study_mc, known: [depth, lambda], n: 2000, score_kinds: [depth, time]}
+  oracle_state_lambda: {kind: study_mc, known: [depth, ac, lambda], n: 2000, score_kinds: [depth, time]}
 
 arms:
-  product:
-    sensor: [sd0.05, sd0.1, sd0.2, sd0.3, sd0.5]
-    policy: [none, one_off, periodic_0.05, periodic_0.1, periodic_0.2, periodic_0.4, continuous]
-    estimator: [grid]
+  products:
+    filter:
+      sensor: [sd0.05, sd0.1, sd0.17, sd0.2, sd0.3, sd0.5]
+      policy: [none, one_off, periodic_0.05, periodic_0.1, periodic_0.2, periodic_0.4, continuous]
+      estimator: [grid]
+    well_specified:
+      sensor: [sd0.1, sd0.2, sd0.5]
+      policy: [one_off, periodic_0.1, periodic_0.2]
+      estimator: [is]
+  list:
+    study_baseline: {sensor: sd0.5, policy: none, estimator: study_baseline}
+    oracle_depth: {sensor: sd0.5, policy: none, estimator: oracle_depth}
+    oracle_depth_lambda: {sensor: sd0.5, policy: none, estimator: oracle_depth_lambda}
+    oracle_state_lambda: {sensor: sd0.5, policy: none, estimator: oracle_state_lambda}
 
 scoring:
   n_random: 5
   frac_max: 0.95
   fixed_fractions: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+  at_depths_mm: [1.0, 2.0, 4.0]  # the study's depths reachable from the start depth
+  at_time_frac: []
+  horizon_frac: 1.0              # scoring window for cracks that never grow, x nominal life
   n_samples: 2000
   alpha_rel: 0.2
   alpha_abs: 0.05
@@ -78,13 +102,30 @@ gates:
   continuous_policy: continuous
   u90_reduction_min: 0.30        # continuous vs periodic at the same sd
   coverage_band: [0.85, 0.95]
+  oracle_tolerance: 0.03         # oracle U90 reduction must match the prediction within this
 
 variants:
-  a0.2mm: {truth: {a_start: {median_mm: 0.2}}}
   a0.5mm: {truth: {a_start: {median_mm: 0.5}}}
   a1mm: {}
   a2mm: {truth: {a_start: {median_mm: 2.0}}}
+  consistency:                   # starts below every study depth, so all five are scored (oracle check)
+    truth: {a_start: {median_mm: 0.15, cov: 0.3, trunc: 2.0}}
+    scoring: {at_depths_mm: [0.2, 0.5, 1.0, 2.0, 4.0]}
+  checkB:                        # replica of check B: 1, 2 or 10 sizings over the first 20 % of life
+    truth: {a_start: {dist: study, median_mm: 1.0, sd_mm: 0.5}}
+    sensors:
+      sd0.15b: {sd_abs_mm: 0.15, bias_sd_mm: 0.15}      # "0.15 + 0.15": random plus shared bias
+    policies:
+      w1: {kind: window, n: 1, span_frac: 0.2}
+      w2: {kind: window, n: 2, span_frac: 0.2}
+      w10: {kind: window, n: 10, span_frac: 0.2}
+    arms:
+      products:
+        filter: {sensor: [sd0.1, sd0.2, sd0.5, sd0.15b], policy: [none, w1, w2, w10], estimator: [grid]}
+        well_specified: {sensor: [sd0.1, sd0.2, sd0.5, sd0.15b], policy: [none, w1, w2, w10], estimator: [is]}
+    scoring: {at_time_frac: [0.2], at_depths_mm: [], fixed_fractions: [], n_random: 0}
+    sensor_common: {pod_a50_mm: 0.0, pod_a90_mm: 0.0, a_floor_mm: 0.0, a_size_min_mm: 0.0}
   a1mm_correlated:               # installed sensor: shared bias and slowly varying error
     sensor_common: {bias_sd_mm: 0.1, corr_frac: 0.05}
-  a1mm_path_variability:         # truth rate varies along the path; the filter does not model it
-    truth: {variability: {sd: 0.2, corr_log_a: 0.5}}
+  a1mm_mismatched:               # truth with closure/K behaviour (kappa, SIF error) and rate wander no filter models
+    truth: {extended: true, variability: {sd: 0.2, corr_log_a: 0.5}}

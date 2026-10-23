@@ -1,4 +1,4 @@
-"""Approach 4: turn forecast accuracy into inspection and repair decisions.
+"""Approach 3: turn forecast accuracy into inspection and repair decisions.
 
 Decision rule (risk-based, after Straub & Faber 2006): after each reading, act
 (repair or retire) if the forecast probability of failing before the next
@@ -35,7 +35,7 @@ def total(dec, c):
 
 def expected(dec, c):
     x = total(dec, c).to_numpy(float)
-    return float(x.mean()), float(x.std(ddof=1) / np.sqrt(max(x.size, 1)))
+    return float(x.mean()), float(x.std(ddof=1) / np.sqrt(x.size)) if x.size > 1 else np.nan
 
 
 def break_even_per_life(cont, periodic, c_cont, c_periodic):

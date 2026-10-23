@@ -1,4 +1,4 @@
-"""Bayesian model comparison between hypotheses (Approach 3: residual stress).
+"""Bayesian model comparison between hypotheses (Approach 2: residual stress).
 
 Each hypothesis is a GridBayes with its own forward model (e.g. a residual-
 stress scenario tabulated over its amplitude) and prior. All are updated on the

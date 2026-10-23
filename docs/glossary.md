@@ -22,3 +22,11 @@
 | Evidence, Bayes factor | p(record | hypothesis); ratio between two hypotheses. 2 ln BF > 6 is "strong" |
 | Gate | A pre-agreed threshold that decides whether an approach continues |
 | Manifest | `manifest.json` beside each run: config hash, commit, pipeline commit, versions, seed, date, runtime |
+| Oracle arm | `study_mc` with some inputs set to the specimen's true values: the sensitivity engine with perfect information. A reference, not an estimator |
+| Study baseline | `study_mc` with nothing known: the sensitivity study's own population at the true current depth (depth spread sd 0.5 mm, or CoV 0.6 below 1 mm) |
+| Predicted reduction | 1 − U90(oracle) / U90(study baseline), at the same depth; must match the frozen prediction |
+| Realised reduction, realised fraction | 1 − U90(arm) / U90(study baseline); its ratio to the predicted reduction. The approach's efficacy |
+| Check A, check B | Scoping-page checks on the original pipeline: the λ group's share of U90 with crack state known (A); U90 after 1, 2, 10 sizings over 20 % of life (B) |
+| ESS | Effective sample size of importance weights, 1 / Σw²; recorded with every `nasgro_is` forecast |
+| Brier score (arrest) | Mean of (p_arrest − arrested)²: how well the forecast says whether the crack will ever fail |
+| LCR | Longitudinal critically refracted waves: travel time gives the residual stress averaged over a near-surface layer |

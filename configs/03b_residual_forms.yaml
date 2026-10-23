@@ -1,7 +1,6 @@
-# 03b · M2, Approach 3: Bayes factors between the three residual-stress forms,
-# all tensile: K_res(a) superposition, BS 7910 uniform background, and
-# redistribution (superposition relaxing with crack extension, after Edwards 2006).
-# r_inf and ell_mm are PLACEHOLDERS to agree with supervisors.
+# E-03b · Approach 2: can the depth record tell the three residual-stress forms apart, all tensile?
+# K_res(a) superposition, BS 7910 uniform background, and redistribution (superposition relaxing as
+# the crack extends, after Edwards 2006). r_inf and ell_mm are PLACEHOLDERS to agree with supervisors.
 extends: 01_depth_only.yaml
 experiment: 03b_residual_forms
 n_specimens: 600
@@ -23,10 +22,15 @@ estimators:
       redistribution: {from: plate_weld, form: redistribution, r_inf: 0.4, ell_mm: 1.0, amp_nodes: 11}
 
 arms:
-  product:
-    sensor: [sd0.05, sd0.1, sd0.2, sd0.3, sd0.5]
-    policy: [periodic_0.1, continuous]
-    estimator: [bf]
+  products:
+    filter:
+      sensor: [sd0.05, sd0.1, sd0.2, sd0.3, sd0.5]
+      policy: [periodic_0.1, continuous]
+      estimator: [bf]
+    well_specified:
+      sensor: [sd0.1, sd0.2, sd0.5]
+      policy: [periodic_0.1]
+      estimator: [is]
 
 gates:
   placeholder: true

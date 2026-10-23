@@ -61,6 +61,8 @@ class ParticleFilter(Estimator):
         return 1.0 / np.sum(w ** 2)
 
     def update(self, obs):
+        if obs.channel != "depth":
+            raise NotImplementedError("ParticleFilter uses depth readings only")
         self.history.append(obs)
         old = self.acc.loglik()
         self.acc.update(self.forward.depth_at(obs.N, self.theta), obs)

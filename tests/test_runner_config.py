@@ -43,7 +43,7 @@ def test_run_writes_manifest_and_summary(tmp_path):
     out = runner.run(small_cfg(), tmp_path / "run")
     m = manifest.require(out)
     assert m["config_hash"] == config.config_hash(small_cfg())
-    assert m["nasgro_sa"]["commit"].startswith("7bf96977")
+    assert m["nasgro_sa"]["commit"].startswith("28f217ce")
     assert (out / "summary.csv").is_file()
 
 

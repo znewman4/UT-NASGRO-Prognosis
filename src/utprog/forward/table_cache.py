@@ -41,6 +41,7 @@ class NasgroTable(CurveModel):
         self.axes = tuple(axes)
         self.nodes = [np.asarray(sorted(float(x) for x in v)) for v in axes.values()]
         nom = priors.nominal_inputs(case, self.nominal)
+        self._nom = nom
         self.Kc = float(nom["Kc"][0])
         self.C_nominal = float(nom["C"][0])
         a_lim = float(nasgro().cases.a_limit(case, nom)[0])
@@ -93,6 +94,26 @@ class NasgroTable(CurveModel):
         rate, kmax = adapter.rate_on_grid(self.case, s, np.tile(a_mid, (n, 1)), kfn)
         values = np.concatenate([np.log(np.maximum(rate, 1e-300)), kmax], axis=1)
         return values.reshape(tuple(len(v) for v in self.nodes) + (2 * a_mid.size,))
+
+    def layer_means(self, theta, depths):
+        """LCR layer averages (G, K) of this hypothesis's residual stress (MPa); 0 without one.
+
+        Uses the same surface stress as the table (amplitude x sigma_y, first-cycle shakedown
+        at nominal load if the scenario has it) and the median decay length."""
+        from ..sensors.stress import layer_means
+        n = np.size(theta["log_lambda"])
+        if self.rs is None:
+            return np.zeros((n, len(depths)))
+        lo, hi = self.rs["A"]
+        amp = np.broadcast_to(np.asarray(theta.get("rs_amp", 0.5 * (lo + hi)), float), (n,))
+        sy = float(self._nom["sigma_y"][0])
+        sig = amp * sy
+        if self.rs["shakedown"]:
+            smax = float(nasgro().cases.max_stress(self.case, self._nom)[0])
+            smin = smax * float(self._nom["R"][0])
+            sig = np.clip(sig, -sy - smin, sy - smax)
+        L = np.inf if self.rs["L"] is None else float(self.rs["L"][0])
+        return layer_means(sig, np.full(n, L), depths)
 
     def curve(self, psi=()):
         key = tuple(float(x) for x in psi)

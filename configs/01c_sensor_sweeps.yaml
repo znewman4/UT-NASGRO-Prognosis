@@ -1,0 +1,23 @@
+# E-01c · Approach 1: how the realised efficacy degrades with the placeholder sensor values.
+# Every combination of the sweeps below is a separate run, so results come out as conditions
+# ("continuous pays if correlation < X and relative error < Y"), not single numbers.
+extends: 01_depth_only.yaml
+experiment: 01c_sensor_sweeps
+n_specimens: 300
+arms:
+  products:
+    filter:
+      sensor: [sd0.1, sd0.2, sd0.5]
+      policy: [one_off, periodic_0.1, continuous]
+      estimator: [grid]
+    well_specified:
+      sensor: [sd0.2]
+      policy: [periodic_0.1]
+      estimator: [is]
+variants:
+  a1mm: {}
+sweeps:
+  sensor_common.sd_rel: [0.0, 0.11, 0.19]          # Peng et al. 2018: image < 11 %, S-matrix < 19 %
+  sensor_common.corr_frac: [0.0, 0.05]
+  sensor_common.bias_sd_mm: [0.0, 0.1]
+  sensor_common.pod_a50_mm: [0.15, 0.4]

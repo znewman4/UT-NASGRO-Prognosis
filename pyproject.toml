@@ -31,6 +31,6 @@ markers = ["slow: Monte Carlo checks that take minutes (run with -m slow)"]
 # file by file against external/nasgro_sa.lock.json on every import.
 [tool.utprog.nasgro_sa]
 repo = "https://github.com/znewman4/NASGRO-Sensitivity-Analysis"
-commit = "7bf96977d8557badd49c7f08607d648605caaeaf"
+commit = "28f217cea555d26b76c6e940ce4b7309f7f514cd"
 path = "external/nasgro_sa"
 lock = "external/nasgro_sa.lock.json"

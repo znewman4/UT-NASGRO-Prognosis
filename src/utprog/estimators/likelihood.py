@@ -135,8 +135,35 @@ class GaussianAccumulator:
 
 
 def replay(noise, forward, theta, history):
-    """Accumulator for parameter points theta over a whole record."""
+    """Accumulator for parameter points theta over the depth readings of a whole record."""
     acc = GaussianAccumulator(noise, np.size(theta["log_lambda"]))
     for obs in history:
-        acc.update(forward.depth_at(obs.N, theta), obs)
+        if obs.channel == "depth":
+            acc.update(forward.depth_at(obs.N, theta), obs)
     return acc
+
+
+@dataclass(frozen=True)
+class StressNoise:
+    """LCR layer-average residual-stress survey: independent error per layer plus a shared
+    offset per survey (uncompensated temperature or reference error). MPa."""
+    sd: float
+    drift_sd: float = 0.0
+
+    def __post_init__(self):
+        if not self.sd > 0.0:
+            raise ValueError("stress sd must be positive")
+
+    @classmethod
+    def from_config(cls, d):
+        return cls(float(d["sd_MPa"]), float(d.get("drift_sd_MPa", 0.0)))
+
+
+def stress_loglik(means, obs, nz):
+    """log N(values; means, sd^2 I + drift^2 1 1^T) for every row of means (G, K), in closed form."""
+    r = np.asarray(obs.values, float)[None, :] - np.atleast_2d(means)
+    k = r.shape[1]
+    s2, d2 = nz.sd ** 2, nz.drift_sd ** 2
+    quad = (r ** 2).sum(axis=1) / s2 - d2 * r.sum(axis=1) ** 2 / (s2 * (s2 + k * d2))
+    logdet = k * np.log(s2) + np.log1p(k * d2 / s2)
+    return -0.5 * (k * LOG2PI + logdet + quad)

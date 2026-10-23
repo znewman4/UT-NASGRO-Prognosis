@@ -1,4 +1,4 @@
-"""Crack-opening channel (Approach 2, M4). On hold until the standard-variables rerun.
+"""Crack-opening channel (Approach 4, M4). On hold until the standard-variables rerun.
 
 If kept: a feature-to-opening calibration against compliance and DIC
 (Rokhlin & Kim 2003; Cheng et al. 2017), observing the opening level Kop/Kmax

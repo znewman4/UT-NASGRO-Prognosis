@@ -1,6 +1,6 @@
 """Effects on the virtual specimens beyond constant-amplitude NASGRO growth.
 
-Residual stress (M2, Approach 3) reuses nasgro_scenarios.residual_stress unchanged.
+Residual stress (M2, Approach 2) reuses nasgro_scenarios.residual_stress unchanged.
 Three forms:
     superposition    decaying profile A sigma_y (1 - z/L) e^(-z/L); K_res(a) from the
                      Shen & Glinka weight function, added to Kmax and Kmin

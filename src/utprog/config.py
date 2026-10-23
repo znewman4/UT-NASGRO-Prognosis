@@ -1,5 +1,9 @@
 """YAML experiment configs: inheritance, variants and a stable hash.
 
+`sweeps` maps dotted paths to lists of values (e.g. "sensor_common.corr_frac":
+[0, 0.02, 0.05]); every combination is crossed with every variant, so results
+come out as conditions rather than single numbers.
+
 A config may name a parent with `extends: other.yaml`; dictionaries merge
 recursively and the child wins. `variants` is not merged: a child that sets it
 replaces the parent's. Each variant is the base config deep-merged with that
@@ -9,6 +13,7 @@ Write floats with a decimal point in YAML (1.0e-11, not 1e-11): PyYAML reads
 the latter as a string.
 """
 import copy
+import itertools
 import hashlib
 import json
 from pathlib import Path
@@ -38,13 +43,31 @@ def load(path):
     return cfg
 
 
+def _nest(path, value):
+    out = value
+    for k in reversed(path.split(".")):
+        out = {k: out}
+    return out
+
+
 def variants(cfg):
-    """[(name, resolved config)]: the base merged with each variant, or the base alone as 'base'."""
-    vs = cfg.get("variants") or {}
-    base = {k: v for k, v in cfg.items() if k != "variants"}
-    if not vs:
-        return [("base", base)]
-    return [(name, dict(deep_merge(base, over or {}), variant=name)) for name, over in vs.items()]
+    """[(name, resolved config)]: the base merged with each variant (or the base alone, 'base'),
+    crossed with every combination of `sweeps`."""
+    vs = cfg.get("variants") or {"base": {}}
+    sweeps = cfg.get("sweeps") or {}
+    base = {k: v for k, v in cfg.items() if k not in ("variants", "sweeps")}
+    combos = [()] if not sweeps else list(itertools.product(*[[(k, v) for v in vals] for k, vals in sweeps.items()]))
+    out = []
+    for name, over in vs.items():
+        for combo in combos:
+            c = deep_merge(base, over or {})
+            for k, v in combo:
+                c = deep_merge(c, _nest(k, v))
+            vname = name + "".join(f"|{k.split('.')[-1]}={v}" for k, v in combo)
+            if vname != "base" or cfg.get("variants"):
+                c["variant"] = vname
+            out.append((vname, c))
+    return out
 
 
 def config_hash(cfg):

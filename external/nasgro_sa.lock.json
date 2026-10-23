@@ -1,8 +1,8 @@
 {
   "repo": "https://github.com/znewman4/NASGRO-Sensitivity-Analysis",
-  "commit": "7bf96977d8557badd49c7f08607d648605caaeaf",
+  "commit": "28f217cea555d26b76c6e940ce4b7309f7f514cd",
   "package": "nasgro_scenarios",
-  "note": "nasgro_scenarios is the rebuilt nasgro_sa pipeline (see its README). Hashes are SHA-256 with CRLF normalised to LF.",
+  "note": "nasgro_scenarios is the rebuilt nasgro_sa pipeline (see its README). 28f217c is the head of the branch the 23 Oct NASGRO-only report links to; its modules are byte-identical to 7bf9697, it only adds the NASGRO-only variable-amplitude results. Hashes are SHA-256 with CRLF normalised to LF.",
   "sha256": {
     "nasgro_scenarios/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "nasgro_scenarios/cases.py": "36d391e9068952c1a16a0f4ed4c06edd5caeb2e802fd5b193b63340e61fb5189",
@@ -16,6 +16,10 @@
     "results/baseline.json": "6ee46f2b665397f482f7ecfc4ea360d8bb5035d6dc934122a950a1516100d424",
     "results/2026-10-23_nasgro_only/rankings.json": "67579d261d965bf46c3ee46e02fcf7616f36473173de312cb5cc82ed2676b089",
     "results/mixed_mode_step1.json": "81f036a7eaf30bd15db3a9d9d414abb2944810b203221f74bf0d1c6258df8374",
-    "results/residual_stress.json": "3acac013a71e795fe1b838e13a5b27149c16dfbb7a0ea3ee19a016f17cc40388"
+    "results/residual_stress.json": "3acac013a71e795fe1b838e13a5b27149c16dfbb7a0ea3ee19a016f17cc40388",
+    "results/2026-10-23_nasgro_only/variable_amplitude.json": "2049f110f13edb0a5b42d5f4acd2f15e362c1879a7325f2551ee151bbdc294a6",
+    "results/2026-10-23_nasgro_only/residual_stress.json": "680bf49fe981fa487a65c311be4e8fe3a0c03b161f4bc639ec3d0d4b7e22eb9b",
+    "results/2026-10-23_nasgro_only/mixed_mode.json": "c8ddd7493e34a9cd6e1096b26787e024492fac698f35063b81faf7b09e651fb1",
+    "results/2026-10-23_nasgro_only/doubling.json": "fc2facb5ff2bb47f6ab132081fec76aac5ea0aeeaab0114c34b2c25d83bcc1e3"
   }
 }

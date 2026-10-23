@@ -1,11 +1,18 @@
-# 01b · M1 on the round bar (25CrMo4, D 18 mm, R -1, 250 MPa). Small bar cracks
-# often arrest at threshold (Pf 73 % at 0.5 mm in the study); arrested specimens
-# are counted in specimens.csv and left out of the RUL scores.
+# E-01b · Approach 1 on the round bar (25CrMo4, D 18 mm, R -1, 250 MPa). Small bar cracks
+# often arrest at threshold (Pf 73 % at 0.5 mm in the study); they are kept, and only their
+# arrest forecast is scored.
 extends: 01_depth_only.yaml
 experiment: 01b_depth_only_bar
 truth:
   case: bar
+estimators:
+  oracle_state_lambda: {kind: study_mc, known: [depth, lambda], n: 2000, score_kinds: [depth, time]}
 variants:
   a0.5mm: {truth: {a_start: {median_mm: 0.5}}}
   a1mm: {}
   a2mm: {truth: {a_start: {median_mm: 2.0}}}
+  consistency:
+    truth: {a_start: {median_mm: 0.4, cov: 0.2, trunc: 1.5}}
+    scoring: {at_depths_mm: [0.5, 1.0, 2.0, 4.0]}
+  a1mm_mismatched:
+    truth: {extended: true, variability: {sd: 0.2, corr_log_a: 0.5}}

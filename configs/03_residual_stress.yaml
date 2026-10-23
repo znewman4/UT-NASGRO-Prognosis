@@ -1,9 +1,12 @@
-# 03 · M2, Approach 3: can the sized-depth record alone classify the residual
-# stress as tensile, none or compressive?
-# Truth: each specimen gets one class with equal probability. Estimator: Bayesian
-# model comparison, one grid posterior per class, each with the lumped growth
-# multiplier (so residual stress competes with it: the confounding the plan names).
-# Residual-stress inputs reuse nasgro_scenarios.residual_stress unchanged.
+# E-03 · Approach 2 (residual stress) from the sized-depth record alone.
+# Prediction (docs/predictions.md, P2.1-P2.2): presence and sign change small-crack life by about x2
+# (tensile profile: -0.26 to -0.34 decades at 0.2-1 mm on the plate) and stop or start small cracks;
+# amplitude and decay length are worth <= 7 % of U90.
+# Truth: each specimen tensile, none or compressive with equal probability (validated residual-stress module).
+# Estimators: bf (one grid posterior per class, each with its own lambda: Bayes factors), is (the class
+# mixture inside the well-specified importance sampler) and oracles that know the class, or the class and
+# its amplitude and decay length. This is the "growth record alone" baseline of the page's L3; E-03c adds
+# the ultrasonic stress measurement.
 extends: 01_depth_only.yaml
 experiment: 03_residual_stress
 n_specimens: 600
@@ -24,12 +27,26 @@ estimators:
       tensile: {from: plate_weld, amp_nodes: 11}
       none: {}
       compressive: {A: [-0.8, -0.4], L_mm: [0.8, 0.3], shakedown: true, amp_nodes: 9}
+  oracle_depth_class: {kind: study_mc, known: [depth, rs_class], n: 2000, score_kinds: [depth, time]}
+  oracle_depth_rs: {kind: study_mc, known: [depth, rs_class, rs_params], n: 2000, score_kinds: [depth, time]}
 
 arms:
-  product:
-    sensor: [sd0.05, sd0.1, sd0.2, sd0.3, sd0.5]
-    policy: [periodic_0.1, continuous]
-    estimator: [bf]
+  products:
+    filter:
+      sensor: [sd0.05, sd0.1, sd0.2, sd0.3, sd0.5]
+      policy: [periodic_0.1, continuous]
+      estimator: [bf]
+    well_specified:
+      sensor: [sd0.1, sd0.2, sd0.5]
+      policy: [periodic_0.1]
+      estimator: [is]
+  list:
+    study_baseline: {sensor: sd0.5, policy: none, estimator: study_baseline}
+    oracle_depth: {sensor: sd0.5, policy: none, estimator: oracle_depth}
+    oracle_depth_class: {sensor: sd0.5, policy: none, estimator: oracle_depth_class}
+    oracle_depth_rs: {sensor: sd0.5, policy: none, estimator: oracle_depth_rs}
+    oracle_depth_lambda: {sensor: sd0.5, policy: none, estimator: oracle_depth_lambda}
+    oracle_state_lambda: {sensor: sd0.5, policy: none, estimator: oracle_state_lambda}
 
 gates:
   placeholder: true
@@ -41,3 +58,5 @@ gates:
 variants:
   a0.5mm: {truth: {a_start: {median_mm: 0.5}}}
   a1mm: {}
+  a1mm_mismatched:
+    truth: {extended: true, variability: {sd: 0.2, corr_log_a: 0.5}}

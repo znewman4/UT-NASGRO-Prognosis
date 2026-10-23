@@ -26,7 +26,10 @@ def test_forecast_record_u90_and_coverage():
 def test_forecast_record_handles_arrest_samples():
     x = np.concatenate([np.full(900, 1e5), np.full(100, np.inf)])
     r = metrics.forecast_record(x, 1e5, 2e5)
-    assert np.isinf(r["q95"]) and np.isinf(r["u90"]) and np.isfinite(r["crps_log"])
+    assert np.isinf(r["q95"]) and r["u90"] == 0.0 and r["p_arrest"] == pytest.approx(0.1)
+    assert np.isfinite(r["crps_log"])
+    r = metrics.forecast_record(x, np.inf, 2e5)              # the true crack never fails
+    assert np.isnan(r["log_bias"]) and np.isnan(r["covered"]) and r["p_arrest"] == pytest.approx(0.1)
 
 
 def test_wilson_contains_proportion():

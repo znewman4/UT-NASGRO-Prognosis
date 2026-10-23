@@ -1,7 +1,9 @@
 """Forecast scores for one forecast against the true remaining life.
 
-    u90          width in decades of the central 90 % forecast interval (as in the
-                 sensitivity study), log10(q95) - log10(q05)
+    u90          width in decades of the central 90 % of the forecast lives that are
+                 finite, log10(q95 / q05): the sensitivity study's definition ("over
+                 cracks that fail"), so oracle arms reproduce its numbers
+    p_arrest     forecast probability that the crack never fails (inf samples)
     log_bias     log10(forecast median) - log10(true RUL)
     covered      true RUL inside the central 90 % interval
     crps_log     continuous ranked probability score of log10 RUL, a proper score
@@ -28,15 +30,28 @@ def crps_sample(x, y):
     return float(np.mean(np.abs(x - y)) - np.sum((2 * i - n - 1) * x) / n ** 2)
 
 
+def u90_finite(x):
+    """U90 over finite samples, as nasgro_scenarios.life.u90 (nan if fewer than 20)."""
+    f = x[np.isfinite(x)]
+    if f.size < 20:
+        return np.nan
+    q05, q95 = np.percentile(np.log10(np.maximum(f, 1.0)), [5, 95])
+    return float(q95 - q05)
+
+
 def forecast_record(samples, true_rul, life, alpha_rel=0.2, alpha_abs=0.05):
     x = np.asarray(samples, float)
     q05, q25, q50, q75, q95 = np.quantile(x, QUANTILES, method="inverted_cdf")
+    out = dict(q05=q05, q25=q25, q50=q50, q75=q75, q95=q95, u90=u90_finite(x),
+               p_arrest=float(np.mean(np.isinf(x))))
+    if not np.isfinite(true_rul):              # the true crack never fails: only the arrest forecast is scored
+        return dict(out, log_bias=np.nan, covered=np.nan, crps_log=np.nan, pit=np.nan,
+                    p_alpha_lambda=np.nan, p_ph=np.nan)
     t = max(float(true_rul), 1.0)
     with np.errstate(divide="ignore", invalid="ignore"):
-        u90 = float(np.log10(q95) - np.log10(max(q05, 1.0)))
         log_bias = float(np.log10(max(q50, 1.0)) - np.log10(t))
         err = np.abs(x - true_rul)
-    return dict(q05=q05, q25=q25, q50=q50, q75=q75, q95=q95, u90=u90, log_bias=log_bias,
+    return dict(out, log_bias=log_bias,
                 covered=bool(q05 <= true_rul <= q95),
                 crps_log=crps_sample(np.log10(np.clip(x, 1.0, CAP)), np.log10(min(t, CAP))),
                 pit=float(np.mean(x < true_rul) + 0.5 * np.mean(x == true_rul)),
