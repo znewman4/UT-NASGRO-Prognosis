@@ -517,6 +517,23 @@ error” adds a bias drawn once per specimen (sd 0.1 mm) and an error that wande
 two effects no filter models: Newman's opening level scaled by κ (CoV 0.1) and an error on the stress-intensity factor
 (CoV 0.05), plus a slowly wandering growth rate (sd 0.2 in log rate along the crack path).</p>
 {table(head, rows)}''')
+        if "a1mm_mismatched" in rb and "a1mm" in rb:
+            d = [(rb["a1mm"][a]["cov"] - rb["a1mm_mismatched"][a]["cov"]) for a, _ in ROBUST_ARMS]
+            du = [abs(rb["a1mm"][a]["u90"] - rb["a1mm_mismatched"][a]["u90"]) for a, _ in ROBUST_ARMS]
+            out.append(f'''<p>When the model is wrong, no arm's U90 changes by more than {max(du):.2f} decades, but every arm
+loses {min(d) * 100:.0f}–{max(d) * 100:.0f} points of coverage. A filter cannot widen its interval for an error it
+does not model, and the full-NASGRO filter is no exception
+({pct(rb["a1mm_mismatched"]["sd0.2|periodic_0.1|is"]["cov"])}). This is the margin a model-discrepancy term would have
+to restore, and the reason real growth records are the next test.</p>''')
+        if "a1mm_correlated" in rb and "a1mm" in rb:
+            c0, c1 = rb["a1mm"]["sd0.2|continuous|grid"], rb["a1mm_correlated"]["sd0.2|continuous|grid"]
+            p0, p1 = rb["a1mm"]["sd0.2|periodic_0.1|grid"], rb["a1mm_correlated"]["sd0.2|periodic_0.1|grid"]
+            out.append(f'''<p>Correlated sensor error hits continuous monitoring hardest. Its U90 rises from {f2(c0["u90"])} to
+{f2(c1["u90"])} decades (periodic: {f2(p0["u90"])} to {f2(p1["u90"])}), because readings taken close together share
+their error and so carry far less independent information than their number suggests. Coverage rises to
+{pct(c1["cov"])} for the same reason: the filter, told the error is correlated, no longer treats 200 readings as 200
+independent facts. How quickly an installed array's error decorrelates is therefore worth measuring before
+continuous monitoring is costed.</p>''')
     out.append("</section>")
     return "".join(out)
 
@@ -722,6 +739,25 @@ monitoring is there; the filter has to be honest to collect it.</p>''')
                        b1, "The one-parameter filter fails more components the more readings it receives; perfect information "
                            "does not.", A3_LEGEND))
         out.append("<p>Break-even costs for these cracks, as in 4.2:</p>" + a3_breakeven_table("a1mm"))
+        wrong = a3_outcomes("a1mm_mismatched")
+        if wrong is not None:
+            w = wrong[0].set_index("arm")
+            rows = []
+            for arm, lab, _ in A3_ARMS:
+                if arm in g.index and arm in w.index:
+                    rows.append([lab, pct(float(g.loc[arm, "fail"]), 1), pct(float(w.loc[arm, "fail"]), 1),
+                                 f2(float(g.loc[arm, "unused"])), f2(float(w.loc[arm, "unused"]))])
+            out.append(f'''<h3>4.4 When the model is wrong</h3>
+<p>The same cracks grown by the “model wrong” truth of 3.5 (closure and stress-intensity errors and a wandering growth
+rate that no filter models), {int(wrong[0]["n"].iloc[0])} specimens.</p>''' + table(
+                ["Scheme", "Failed, model right", "Failed, model wrong", "Life given up, right", "Life given up, wrong"],
+                rows, num=(1, 2, 3, 4)))
+            fw = lambda a: float(w.loc[a, "fail"]) if a in w.index else np.nan
+            out.append(f'''<p>A wrong model adds failures where the filter is leaned on hardest: continuous monitoring rises to
+{pct(fw("sd0.2|continuous|grid"), 0)} and perfect inspection to {pct(fw("perfect|continuous|grid"), 0)}, while inspection
+every 10 % of life stays at {pct(fw("sd0.2|periodic_0.1|grid"), 0)}: with ten readings per life the filter stays
+uncertain enough for its intervals to absorb the model error. With {int(wrong[0]["n"].iloc[0])} specimens, differences of a few
+points are within noise.</p>''')
     else:
         out.append(missing("E-02 a1mm"))
     out.append("</section>")
