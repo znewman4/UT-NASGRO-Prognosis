@@ -33,6 +33,7 @@ import argparse
 import itertools
 import re
 import json
+import sys
 import time
 import warnings
 from concurrent.futures import ProcessPoolExecutor
@@ -399,6 +400,17 @@ def run_specimen(i):
     return srow, records, decisions
 
 
+def _progress(it, n, cfg, started):
+    """Collect results, printing a line to stderr about every 10 % so long runs can be followed."""
+    out, step = [], max(1, n // 10)
+    for k, r in enumerate(it, 1):
+        out.append(r)
+        if k % step == 0 or k == n:
+            print(f"[{cfg.get('experiment')}/{cfg.get('variant', 'base')}] {k}/{n} specimens, "
+                  f"{time.time() - started:.0f} s", file=sys.stderr, flush=True)
+    return out
+
+
 def run(cfg, out_dir, workers=None):
     started = time.time()
     _init(cfg)                               # builds priors, tables and populations before the workers start
@@ -406,9 +418,9 @@ def run(cfg, out_dir, workers=None):
     workers = int(workers or cfg.get("workers") or 1)
     if workers > 1:
         with ProcessPoolExecutor(max_workers=workers, initializer=_init, initargs=(cfg,)) as ex:
-            res = list(ex.map(run_specimen, range(n), chunksize=max(1, n // (8 * workers))))
+            res = _progress(ex.map(run_specimen, range(n), chunksize=max(1, n // (8 * workers))), n, cfg, started)
     else:
-        res = [run_specimen(i) for i in range(n)]
+        res = _progress(map(run_specimen, range(n)), n, cfg, started)
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     specimens = pd.DataFrame([r[0] for r in res])
