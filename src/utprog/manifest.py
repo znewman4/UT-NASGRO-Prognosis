@@ -26,7 +26,9 @@ def git_info():
         r = subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True)
         return r.stdout.strip() if r.returncode == 0 else None
     commit = git("rev-parse", "HEAD")
-    status = git("status", "--porcelain", "--untracked-files=no")
+    # only what determines results: run outputs and reports change between runs by design
+    status = git("status", "--porcelain", "--untracked-files=no", "--",
+                 "src", "configs", "experiments", "external", "pyproject.toml")
     return dict(commit=commit or "unknown", dirty=bool(status) if status is not None else None)
 
 
