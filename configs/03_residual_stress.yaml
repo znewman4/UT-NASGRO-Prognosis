@@ -59,5 +59,16 @@ gates:
 variants:
   a0.5mm: {truth: {a_start: {median_mm: 0.5}}}
   a1mm: {}
+  a1mm_report:                   # 4-core subset for the first report: continuous Bayes factors at sd 0.2 and 0.5 mm only
+    arms:
+      products:
+        filter: {sensor: [sd0.05, sd0.1, sd0.2, sd0.3, sd0.5], policy: [periodic_0.1], estimator: [bf]}
+        filter_continuous: {sensor: [sd0.2, sd0.5], policy: [continuous], estimator: [bf]}
+  a0.5mm_report:
+    truth: {a_start: {median_mm: 0.5}}
+    arms:
+      products:
+        filter: {sensor: [sd0.05, sd0.1, sd0.2, sd0.3, sd0.5], policy: [periodic_0.1], estimator: [bf]}
+        filter_continuous: {sensor: [sd0.2, sd0.5], policy: [continuous], estimator: [bf]}
   a1mm_mismatched:
     truth: {extended: true, variability: {sd: 0.2, corr_log_a: 0.5}}
