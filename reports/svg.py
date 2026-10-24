@@ -95,9 +95,9 @@ def columns(groups, series, values, *, ylabel, ymax=None, ymin=0.0, pct=False, d
 
 
 def lines(series, *, xlabel, ylabel, xlog=False, xmin=None, xmax=None, ymin=None, ymax=None, pct=False,
-          width=720, height=300, xticks=None, band=None, ref=None, dp=2, xfmt=None, end_labels=True):
+          width=720, height=300, xticks=None, band=None, ref=None, dp=2, xfmt=None, end_labels=True, right=None):
     """series: list of dict(name, x, y, lo=None, hi=None, dash=False, slot=i)."""
-    ml, mr, mt, mb = 56, 120 if end_labels else 16, 14, 46
+    ml, mr, mt, mb = 56, (right or 120) if end_labels else 16, 14, 46
     pw, ph = width - ml - mr, height - mt - mb
     xs = [v for s in series for v in s["x"]]
     ys = [v for s in series for v in list(s["y"]) + list(s.get("lo") or []) + list(s.get("hi") or [])
@@ -123,11 +123,11 @@ def lines(series, *, xlabel, ylabel, xlog=False, xmin=None, xmax=None, ymin=None
     out.append(f'<text class="axl" x="{ml + pw / 2:.0f}" y="{height - 8}" text-anchor="middle">{_e(xlabel)}</text>')
     out.append(f'<text class="axl" transform="translate(14,{mt + ph / 2:.0f}) rotate(-90)" text-anchor="middle">'
                f'{_e(ylabel)}</text>')
-    for yv, lab in (ref or []):
-        out.append(f'<line class="refl" x1="{ml}" x2="{ml + pw}" y1="{y(yv):.1f}" y2="{y(yv):.1f}"/>'
-                   f'<text class="lab3" x="{ml + 4}" y="{y(yv) - 5:.1f}">{_e(lab)}</text>')
-    out.append(f'<line class="axis" x1="{ml}" x2="{ml + pw}" y1="{mt + ph}" y2="{mt + ph}"/>')
     ends = []
+    for yv, lab in (ref or []):                             # reference lines, labelled in the right margin
+        out.append(f'<line class="refl" x1="{ml}" x2="{ml + pw}" y1="{y(yv):.1f}" y2="{y(yv):.1f}"/>')
+        ends.append([y(yv), lab, ml + pw - 6, "ref"])
+    out.append(f'<line class="axis" x1="{ml}" x2="{ml + pw}" y1="{mt + ph}" y2="{mt + ph}"/>')
     for i, s in enumerate(series):
         col = SLOTS[s.get("slot", i)]
         pts = [(x(a), y(b)) for a, b in zip(s["x"], s["y"]) if b is not None and not math.isnan(b)]
@@ -144,16 +144,19 @@ def lines(series, *, xlabel, ylabel, xlog=False, xmin=None, xmax=None, ymin=None
             out.append(f'<circle cx="{a:.1f}" cy="{b:.1f}" r="4" fill="{col}" stroke="var(--panel)" stroke-width="2" '
                        f'tabindex="0" data-tip="{_e(tip)}"/>')
         if pts:
-            ends.append([pts[-1][1], s["name"], pts[-1][0]])
+            ends.append([pts[-1][1], s["name"], pts[-1][0], "series"])
     if end_labels and ends:
-        ends.sort()
+        ends.sort(key=lambda e: e[0])
         prev = -1e9
-        for e in ends:                                      # leader lines keep labels 13 px apart
-            e.append(max(e[0], prev + 13))
-            prev = e[-1]
-        for yv, nm, xv, yl in ends:
+        for en in ends:                                     # leader lines keep labels 13 px apart
+            en.append(max(en[0], prev + 13))
+            prev = en[-1]
+        shift = max(0.0, ends[-1][-1] - (mt + ph + 4))      # keep the lowest label above the axis labels
+        for yv, nm, xv, kind, yl in ends:
+            yl -= shift
+            cls = "lab" if kind == "series" else "lab3"
             out.append(f'<line class="lead" x1="{xv + 6:.1f}" y1="{yv:.1f}" x2="{ml + pw + 10:.1f}" y2="{yl:.1f}"/>'
-                       f'<text class="lab" x="{ml + pw + 13:.1f}" y="{yl + 3.5:.1f}">{_e(nm)}</text>')
+                       f'<text class="{cls}" x="{ml + pw + 13:.1f}" y="{yl + 3.5:.1f}">{_e(nm)}</text>')
     out.append("</svg>")
     return "".join(out)
 

@@ -97,6 +97,25 @@ Approach numbers follow the scoping page: 1 growth rate, 2 residual stress, 3 in
 - **Changes.** E-04 (R change with and without an opening sensor) and E-05 (angle sensor with a
   mixed-mode truth and model averaging) are not built; the first report covers Approaches 1–3.
 
+## D-009 · First runs, before the inputs were agreed (24 Oct)
+
+- **Decision.** The student asked for every Approach 1–3 experiment to be run for a supervisor
+  report before the PLACEHOLDER inputs were agreed (step 4). The runs use the configured values,
+  every one of which is labelled PLACEHOLDER in the report, and reduced specimen counts (100–400
+  per variant) because the container has four cores. Rerun at the configured counts once the
+  inputs are agreed.
+- **Correction.** The first consistency run showed current practice losing 5–15 points of the
+  exact-depth benefit at small sizing errors. Cause: `StaticMC` passed the reading to
+  `cases.sample` without `undetected=False`, so any reading below 1 mm switched tilt to the
+  study's undetected sd (15° instead of 5°). Fixed in 57a031c with a regression test; every run
+  holding a `static_mc` arm was repeated after the fix.
+- **Scoring note.** Forecasts made when the true crack reaches a study depth are a truth-dependent
+  stopping time: they match the study's definition of U90 (sharpness), but coverage there is biased
+  low even for a correct forecaster (a crack that reaches 1 mm early is a fast one). Coverage is
+  read at random and fixed fractions of each specimen's life, which select far less (the
+  well-specified toy covers 89–92 % there), and at fixed cycle counts (check B), which do not
+  select at all.
+
 ## Experiments
 
 | ID | Config | Question | Result | What it changes |
