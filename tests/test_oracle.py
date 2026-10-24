@@ -87,3 +87,18 @@ def test_current_practice_reproduces_the_study_sizing_sweep(ns, case):
         x = est.forecast(0.0, 0, None)
         assert u90_finite(x) == pytest.approx(levels[level]["u90"], abs=1e-9), level
         assert np.isfinite(x).mean() == pytest.approx(levels[level]["pf"], abs=1e-12), level
+
+
+def test_current_practice_treats_a_sized_crack_as_detected():
+    """A reading just below 1 mm is still a sized crack: tilt keeps the sized sd (5 deg), so the
+    forecast is continuous across the study's 1 mm detection boundary."""
+    from utprog.estimators.likelihood import NoiseModel
+    from utprog.estimators.study_mc import StaticMC
+    from utprog.sensors.base import Observation
+    u = {}
+    for y in (0.99e-3, 1.0e-3):
+        est = StaticMC("plate", NoiseModel(sd_abs=0.05e-3), n=4000, seed=1)
+        est.reset()
+        est.update(Observation(0.0, "sized", y))
+        u[y] = u90_finite(est.forecast(0.0, 0, None))
+    assert u[0.99e-3] == pytest.approx(u[1.0e-3], abs=0.01)

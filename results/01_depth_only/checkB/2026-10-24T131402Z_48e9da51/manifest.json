@@ -1,0 +1,343 @@
+{
+ "config_hash": "48e9da5110f68ecd98482cca86d249ff1b970da233757e6232943b30cd9eaa1e",
+ "config": {
+  "experiment": "01_depth_only",
+  "seed": 20261023,
+  "n_specimens": 400,
+  "workers": 8,
+  "time_grid_frac": 0.001,
+  "truth": {
+   "kind": "nasgro",
+   "case": "plate",
+   "a_start": {
+    "median_mm": 1.0,
+    "cov": 0.3,
+    "trunc": 4.0,
+    "dist": "study",
+    "sd_mm": 0.5
+   },
+   "nominal": {},
+   "spread": {},
+   "n_grid": 1000,
+   "extended": false,
+   "variability": {
+    "sd": 0.0,
+    "corr_log_a": 0.5
+   }
+  },
+  "forward": {
+   "a_min_mm": 0.02,
+   "n_grid": 600
+  },
+  "prior": {
+   "log_lambda": {
+    "derive": {
+     "n": 4000,
+     "seed": 1,
+     "interval_rel": [
+      1.0,
+      3.0
+     ],
+     "sd_inflation": 1.0
+    }
+   },
+   "a0": "same_as_truth"
+  },
+  "sensor_common": {
+   "sd_rel": 0.0,
+   "bias_mean_mm": 0.0,
+   "bias_sd_mm": 0.0,
+   "corr_frac": 0.0,
+   "pod_a50_mm": 0.0,
+   "pod_a90_mm": 0.0,
+   "a_floor_mm": 0.0,
+   "a_size_min_mm": 0.0
+  },
+  "sensors": {
+   "sd0.05": {
+    "sd_abs_mm": 0.05
+   },
+   "sd0.1": {
+    "sd_abs_mm": 0.1
+   },
+   "sd0.17": {
+    "sd_abs_mm": 0.167
+   },
+   "sd0.2": {
+    "sd_abs_mm": 0.2
+   },
+   "sd0.3": {
+    "sd_abs_mm": 0.3
+   },
+   "sd0.5": {
+    "sd_abs_mm": 0.5
+   },
+   "sd0.15b": {
+    "sd_abs_mm": 0.15,
+    "bias_sd_mm": 0.15
+   }
+  },
+  "policies": {
+   "none": {
+    "kind": "none"
+   },
+   "one_off": {
+    "kind": "one_off",
+    "at": 0.0
+   },
+   "sized_now": {
+    "kind": "at_forecast"
+   },
+   "periodic_0.05": {
+    "kind": "periodic",
+    "T_frac": 0.05
+   },
+   "periodic_0.1": {
+    "kind": "periodic",
+    "T_frac": 0.1
+   },
+   "periodic_0.2": {
+    "kind": "periodic",
+    "T_frac": 0.2
+   },
+   "periodic_0.4": {
+    "kind": "periodic",
+    "T_frac": 0.4
+   },
+   "continuous": {
+    "kind": "continuous",
+    "dt_frac": 0.005
+   },
+   "w1": {
+    "kind": "window",
+    "n": 1,
+    "span_frac": 0.2
+   },
+   "w2": {
+    "kind": "window",
+    "n": 2,
+    "span_frac": 0.2
+   },
+   "w10": {
+    "kind": "window",
+    "n": 10,
+    "span_frac": 0.2
+   }
+  },
+  "estimators": {
+   "grid": {
+    "kind": "grid",
+    "n_lambda": 121,
+    "n_a0": 61
+   },
+   "is": {
+    "kind": "nasgro_is",
+    "n": 4000,
+    "seed": 2
+   },
+   "static_mc": {
+    "kind": "static_mc",
+    "n": 2000
+   },
+   "study_baseline": {
+    "kind": "study_mc",
+    "known": [],
+    "n": 10000,
+    "score_kinds": [
+     "depth",
+     "time"
+    ]
+   },
+   "oracle_depth": {
+    "kind": "study_mc",
+    "known": [
+     "depth"
+    ],
+    "n": 10000,
+    "score_kinds": [
+     "depth",
+     "time"
+    ]
+   },
+   "oracle_depth_lambda": {
+    "kind": "study_mc",
+    "known": [
+     "depth",
+     "lambda"
+    ],
+    "n": 2000,
+    "score_kinds": [
+     "depth",
+     "time"
+    ]
+   },
+   "oracle_state_lambda": {
+    "kind": "study_mc",
+    "known": [
+     "depth",
+     "ac",
+     "lambda"
+    ],
+    "n": 2000,
+    "score_kinds": [
+     "depth",
+     "time"
+    ]
+   }
+  },
+  "arms": {
+   "products": {
+    "filter": {
+     "sensor": [
+      "sd0.1",
+      "sd0.2",
+      "sd0.5",
+      "sd0.15b"
+     ],
+     "policy": [
+      "none",
+      "w1",
+      "w2",
+      "w10"
+     ],
+     "estimator": [
+      "grid"
+     ]
+    },
+    "well_specified": {
+     "sensor": [
+      "sd0.1",
+      "sd0.2",
+      "sd0.5",
+      "sd0.15b"
+     ],
+     "policy": [
+      "none",
+      "w1",
+      "w2",
+      "w10"
+     ],
+     "estimator": [
+      "is"
+     ]
+    },
+    "sized_now": {
+     "sensor": [
+      "sd0.05",
+      "sd0.1",
+      "sd0.17",
+      "sd0.2",
+      "sd0.3",
+      "sd0.5"
+     ],
+     "policy": [
+      "sized_now"
+     ],
+     "estimator": [
+      "static_mc",
+      "is",
+      "grid"
+     ]
+    }
+   },
+   "list": {
+    "study_baseline": {
+     "sensor": "sd0.5",
+     "policy": "none",
+     "estimator": "study_baseline"
+    },
+    "oracle_depth": {
+     "sensor": "sd0.5",
+     "policy": "none",
+     "estimator": "oracle_depth"
+    },
+    "oracle_depth_lambda": {
+     "sensor": "sd0.5",
+     "policy": "none",
+     "estimator": "oracle_depth_lambda"
+    },
+    "oracle_state_lambda": {
+     "sensor": "sd0.5",
+     "policy": "none",
+     "estimator": "oracle_state_lambda"
+    }
+   }
+  },
+  "scoring": {
+   "n_random": 0,
+   "frac_max": 0.95,
+   "fixed_fractions": [],
+   "at_depths_mm": [],
+   "at_time_frac": [
+    0.2
+   ],
+   "horizon_frac": 1.0,
+   "n_samples": 2000,
+   "alpha_rel": 0.2,
+   "alpha_abs": 0.05,
+   "beta": 0.5
+  },
+  "gates": {
+   "placeholder": true,
+   "continuous_policy": "continuous",
+   "u90_reduction_min": 0.3,
+   "coverage_band": [
+    0.85,
+    0.95
+   ],
+   "oracle_tolerance": 0.03
+  },
+  "variant": "checkB"
+ },
+ "git": {
+  "commit": "4ed4dc54180c228875c0e8327c7bf19016dc1ff4",
+  "dirty": true
+ },
+ "nasgro_sa": {
+  "repo": "https://github.com/znewman4/NASGRO-Sensitivity-Analysis",
+  "commit": "28f217cea555d26b76c6e940ce4b7309f7f514cd",
+  "verified": true
+ },
+ "versions": {
+  "python": "3.13.16",
+  "utprog": "0.1.0",
+  "numpy": "2.1.3",
+  "scipy": "1.14.1",
+  "pandas": "2.2.3",
+  "pyyaml": "6.0.2",
+  "matplotlib": "3.9.2"
+ },
+ "seed": 20261023,
+ "date": "2026-10-24T13:20:07+00:00",
+ "runtime_s": 365.3,
+ "n_specimens": 400,
+ "n_arrested": 4,
+ "workers": 4,
+ "prior": {
+  "mu": -0.028656350022309353,
+  "sd": 0.5628720120195216,
+  "mean": -0.025033452896066725,
+  "std": 0.5778535453160513,
+  "frac_arrested": 0.0,
+  "n_nominal": 16974.381576840697,
+  "case": "plate",
+  "interval": [
+   0.001,
+   0.003
+  ],
+  "n": 4000,
+  "seed": 1,
+  "nominal": {},
+  "spread": {},
+  "n_grid": 400,
+  "commit": "28f217cea555d26b76c6e940ce4b7309f7f514cd",
+  "mu_used": -0.028656350022309353,
+  "sd_used": 0.5628720120195216
+ },
+ "ctx": {
+  "N_nominal": 21984.48525273933,
+  "grid": 22.0,
+  "horizon": 21984.48525273933,
+  "lookahead": 219844.85252739332
+ }
+}

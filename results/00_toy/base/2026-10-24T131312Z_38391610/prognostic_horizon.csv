@@ -1,0 +1,10 @@
+arm,sensor,policy,estimator,ph_frac_mean,ph_frac_median
+pf_check,sd0.1,periodic_0.2,pf,0.28425,0.30000000000000004
+sd0.1|continuous|grid,sd0.1,continuous,grid,0.565,0.6
+sd0.1|none|grid,sd0.1,none,grid,0.0,0.0
+sd0.1|one_off|grid,sd0.1,one_off,grid,0.0,0.0
+sd0.1|periodic_0.2|grid,sd0.1,periodic_0.2,grid,0.282,0.30000000000000004
+sd0.5|continuous|grid,sd0.5,continuous,grid,0.28300000000000003,0.30000000000000004
+sd0.5|none|grid,sd0.5,none,grid,0.0,0.0
+sd0.5|one_off|grid,sd0.5,one_off,grid,0.0,0.0
+sd0.5|periodic_0.2|grid,sd0.5,periodic_0.2,grid,0.06424999999999999,0.09999999999999987

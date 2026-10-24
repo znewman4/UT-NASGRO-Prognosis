@@ -1,0 +1,10 @@
+arm,n,coverage,sbc_chi2,sbc_p,run_dir
+pf_check,400,0.915,20.2,0.3826347799451272,/home/user/UT-NASGRO-Prognosis/results/00_toy/base/2026-10-24T131312Z_38391610
+sd0.1|continuous|grid,400,0.9125,27.3,0.09785700706026944,/home/user/UT-NASGRO-Prognosis/results/00_toy/base/2026-10-24T131312Z_38391610
+sd0.1|none|grid,400,0.8925,21.599999999999998,0.30461334759819003,/home/user/UT-NASGRO-Prognosis/results/00_toy/base/2026-10-24T131312Z_38391610
+sd0.1|one_off|grid,400,0.905,16.599999999999998,0.6169466703751666,/home/user/UT-NASGRO-Prognosis/results/00_toy/base/2026-10-24T131312Z_38391610
+sd0.1|periodic_0.2|grid,400,0.9125,28.599999999999998,0.07254279489970905,/home/user/UT-NASGRO-Prognosis/results/00_toy/base/2026-10-24T131312Z_38391610
+sd0.5|continuous|grid,400,0.885,37.300000000000004,0.0072766152458422625,/home/user/UT-NASGRO-Prognosis/results/00_toy/base/2026-10-24T131312Z_38391610
+sd0.5|none|grid,400,0.8925,21.599999999999998,0.30461334759819003,/home/user/UT-NASGRO-Prognosis/results/00_toy/base/2026-10-24T131312Z_38391610
+sd0.5|one_off|grid,400,0.8925,20.2,0.3826347799451272,/home/user/UT-NASGRO-Prognosis/results/00_toy/base/2026-10-24T131312Z_38391610
+sd0.5|periodic_0.2|grid,400,0.9025,23.5,0.21603567939079157,/home/user/UT-NASGRO-Prognosis/results/00_toy/base/2026-10-24T131312Z_38391610

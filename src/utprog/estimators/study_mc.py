@@ -152,8 +152,10 @@ class StaticMC(StudyMC):
             s = ns.cases.sample(self.case, a_ref, self.n, seed=self.seed, fixed=self.fixed, undetected=True,
                                 spread=self.spread, nominal=self.nominal)
         else:
+            # a sized crack is detected: without undetected=False the study's case switches to its
+            # undetected model (tilt sd 15 deg instead of 5) for any reading below 1 mm
             s = ns.cases.sample(self.case, self.last, self.n, seed=self.seed, fixed=self.fixed + ("depth",),
-                                spread=self.spread, nominal=self.nominal)
+                                undetected=False, spread=self.spread, nominal=self.nominal)
             a = self.last + float(self.noise.sd(self.last)) * ns.cases._z("depth", self.n, self.seed)
             s["a_i"] = np.where(a > 2e-5, a, 2e-5 + np.abs(a - 2e-5))
         return self.lives(s)

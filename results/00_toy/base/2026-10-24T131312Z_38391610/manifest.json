@@ -1,0 +1,152 @@
+{
+ "config_hash": "3839161084d245469e2ad41dacec91bec8ca15354c050d2c9dd1de7341fff672",
+ "config": {
+  "experiment": "00_toy",
+  "seed": 20261023,
+  "n_specimens": 400,
+  "workers": 4,
+  "time_grid_frac": 0.001,
+  "truth": {
+   "kind": "toy",
+   "toy": {
+    "C": 1e-11,
+    "m": 3.0,
+    "dS_MPa": 100.0,
+    "Y": 1.12,
+    "a_c_mm": 10.0
+   },
+   "a_start": {
+    "median_mm": 1.0,
+    "cov": 0.3,
+    "trunc": 4.0
+   },
+   "log_lambda": {
+    "mu": 0.0,
+    "sd": 0.4
+   }
+  },
+  "prior": {
+   "log_lambda": {
+    "mu": 0.0,
+    "sd": 0.4
+   },
+   "a0": "same_as_truth"
+  },
+  "sensors": {
+   "sd0.1": {
+    "sd_abs_mm": 0.1
+   },
+   "sd0.5": {
+    "sd_abs_mm": 0.5
+   }
+  },
+  "policies": {
+   "none": {
+    "kind": "none"
+   },
+   "one_off": {
+    "kind": "one_off",
+    "at": 0.0
+   },
+   "periodic_0.2": {
+    "kind": "periodic",
+    "T_frac": 0.2
+   },
+   "continuous": {
+    "kind": "continuous",
+    "dt_frac": 0.01
+   }
+  },
+  "estimators": {
+   "grid": {
+    "kind": "grid",
+    "n_lambda": 121,
+    "n_a0": 61
+   },
+   "pf": {
+    "kind": "particle_filter",
+    "n_particles": 2000
+   }
+  },
+  "arms": {
+   "product": {
+    "sensor": [
+     "sd0.1",
+     "sd0.5"
+    ],
+    "policy": [
+     "none",
+     "one_off",
+     "periodic_0.2",
+     "continuous"
+    ],
+    "estimator": [
+     "grid"
+    ]
+   },
+   "list": {
+    "pf_check": {
+     "sensor": "sd0.1",
+     "policy": "periodic_0.2",
+     "estimator": "pf"
+    }
+   }
+  },
+  "scoring": {
+   "n_random": 4,
+   "frac_max": 0.95,
+   "fixed_fractions": [
+    0.1,
+    0.2,
+    0.3,
+    0.4,
+    0.5,
+    0.6,
+    0.7,
+    0.8,
+    0.9
+   ],
+   "n_samples": 2000,
+   "alpha_rel": 0.2,
+   "alpha_abs": 0.05,
+   "beta": 0.5,
+   "sbc_draws": 99
+  }
+ },
+ "git": {
+  "commit": "4ed4dc54180c228875c0e8327c7bf19016dc1ff4",
+  "dirty": false
+ },
+ "nasgro_sa": {
+  "repo": "https://github.com/znewman4/NASGRO-Sensitivity-Analysis",
+  "commit": "28f217cea555d26b76c6e940ce4b7309f7f514cd",
+  "verified": true
+ },
+ "versions": {
+  "python": "3.13.16",
+  "utprog": "0.1.0",
+  "numpy": "2.1.3",
+  "scipy": "1.14.1",
+  "pandas": "2.2.3",
+  "pyyaml": "6.0.2",
+  "matplotlib": "3.9.2"
+ },
+ "seed": 20261023,
+ "date": "2026-10-24T13:14:00+00:00",
+ "runtime_s": 48.2,
+ "n_specimens": 400,
+ "n_arrested": 0,
+ "workers": 4,
+ "prior": {
+  "mu": 0.0,
+  "sd": 0.4,
+  "mu_used": 0.0,
+  "sd_used": 0.4
+ },
+ "ctx": {
+  "N_nominal": 552793.0573313052,
+  "grid": 553.0,
+  "horizon": 552793.0573313052,
+  "lookahead": 5527930.573313052
+ }
+}

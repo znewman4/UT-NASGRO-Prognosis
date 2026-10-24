@@ -16,3 +16,17 @@ variants:
     scoring: {at_depths_mm: [0.5, 1.0, 2.0, 4.0]}
   a1mm_mismatched:
     truth: {extended: true, variability: {sd: 0.2, corr_log_a: 0.5}}
+  checkB:                        # check-B replica on the bar (same block as 01_depth_only.yaml)
+    truth: {a_start: {dist: study, median_mm: 1.0, sd_mm: 0.5}}
+    sensors:
+      sd0.15b: {sd_abs_mm: 0.15, bias_sd_mm: 0.15}
+    policies:
+      w1: {kind: window, n: 1, span_frac: 0.2}
+      w2: {kind: window, n: 2, span_frac: 0.2}
+      w10: {kind: window, n: 10, span_frac: 0.2}
+    arms:
+      products:
+        filter: {sensor: [sd0.1, sd0.2, sd0.5, sd0.15b], policy: [none, w1, w2, w10], estimator: [grid]}
+        well_specified: {sensor: [sd0.1, sd0.2, sd0.5, sd0.15b], policy: [none, w1, w2, w10], estimator: [is]}
+    scoring: {at_time_frac: [0.2], at_depths_mm: [], fixed_fractions: [], n_random: 0}
+    sensor_common: {pod_a50_mm: 0.0, pod_a90_mm: 0.0, a_floor_mm: 0.0, a_size_min_mm: 0.0}
