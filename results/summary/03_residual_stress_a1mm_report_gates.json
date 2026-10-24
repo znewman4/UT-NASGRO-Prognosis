@@ -1,0 +1,31 @@
+{
+ "thresholds": {
+  "placeholder": true,
+  "continuous_policy": "continuous",
+  "u90_reduction_min": 0.3,
+  "coverage_band": [
+   0.85,
+   0.95
+  ],
+  "oracle_tolerance": 0.03,
+  "sd_mm": 0.2,
+  "min_correct": 0.8,
+  "by_life_fraction": 0.5,
+  "strong_two_ln_bf": 6.0
+ },
+ "by_policy": {
+  "bf|sd0.2|continuous": {
+   "first_life_fraction": 0.9,
+   "passes": false
+  },
+  "bf|sd0.2|periodic_0.1": {
+   "first_life_fraction": null,
+   "passes": false
+  },
+  "is|sd0.2|periodic_0.1": {
+   "first_life_fraction": null,
+   "passes": false
+  }
+ },
+ "run_dir": "/home/user/UT-NASGRO-Prognosis/results/03_residual_stress/a1mm_report/2026-10-24T164605Z_efb8e7e4"
+}

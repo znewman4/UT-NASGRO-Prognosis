@@ -161,7 +161,7 @@ def sec_validation():
             "with the well-specified filter, forecast at a fixed cycle count (20 % of nominal life) for every specimen "
             "still in service. Both sit on 90 %, so the likelihood, the filters and the scoring are unbiased.",
             svg.legend(["Toy problem (closed-form growth)", "NASGRO truth, well-specified filter"])))
-    tests = table(["#", "Automated check (85 + 1 tests, all passing)", "Why it matters"], [
+    tests = table(["#", "Automated check (86 tests, all passing)", "Why it matters"], [
         ["1", "Toy recovery: a known growth rate is recovered from noisy readings", "The estimator can learn at all"],
         ["2", "Coverage and simulation-based calibration (Talts et al. 2018)", "Intervals mean what they say"],
         ["3", "Adapter reproduces the pipeline's lives and stored statistics to 10<sup>−9</sup>", "The truth is the validated NASGRO model, unchanged"],
@@ -413,14 +413,15 @@ had to earn them.</p>''']
 <p><strong>Prediction (P1.2).</strong> Sizing to a third of today's ultrasonic error (sd 0.17 mm instead of
 0.5 mm) captures {pct(i_size["study017"])} of the benefit of knowing depth exactly at 1 mm (plate).</p>
 <p><strong>Simulation.</strong> Current practice, given one fresh sizing when the true crack reaches 1 mm,
-captures {pct(i_size["cp017"])} at sd 0.17 mm and {pct(i_size["cp02"])} at the study's 0.2 mm target. Even at
-0.05 mm it reaches {pct(i_size["cp005"])}, not 100 %.</p>
-{fig("Current practice reaches most, not all, of the exact-depth benefit",
+captures {pct(i_size["cp017"])} at sd 0.17 mm, {pct(i_size["cp02"])} at the study's 0.2 mm target and
+{pct(i_size["cp005"])} at 0.05 mm. The study's static calculation is a fair description of one fresh sizing.</p>
+{fig("One fresh sizing delivers what the study's sweep says",
      "Plate, 1 mm. Reduction in U90 against the study baseline, as a share of the reduction when depth is known exactly",
      b_size,
-     "The gap to the study's sweep at small error is the reading itself: the study centres its Monte Carlo on the true "
-     "depth, while a real reading is off by its error, and a forecast built around a reading that is too deep or too "
-     "shallow is wider on average. The study's sweep therefore slightly overstates what one sizing delivers.",
+     "Each virtual crack is sized once, with its own measurement error, at the moment it reaches 1 mm; the NASGRO Monte "
+     "Carlo is then run around the reading, as in practice. The study instead centres its Monte Carlo on the true depth. "
+     "The two agree to within a few points at every sizing error, so the reading's own error costs little beyond what "
+     "the study already charges for it.",
      svg.legend(["Simulation: current practice", "Study sweep (P1.2)"], ["line", "line"]))}''')
     if i_cb:
         r = i_cb["red"]
@@ -561,9 +562,17 @@ def a3_breakeven(variant):
 
 
 # --------------------------------------------------------------------------- 5 · Approach 2
+def latest_of(exp, variants):
+    for v in variants:
+        run = R.latest(exp, v)
+        if run is not None:
+            return run
+    return None
+
+
 def a2_classification(exp, variant):
     """Correct-classification rate of residual-stress class against life fraction (as experiments/03)."""
-    run = R.latest(exp, variant)
+    run = latest_of(exp, [variant, variant + "_report"])
     if run is None:
         return None, None
     rec = R.records(run)
@@ -578,7 +587,7 @@ def a2_classification(exp, variant):
 
 
 def a2_oracle(variant="a1mm"):
-    run = R.latest("03_residual_stress", variant)
+    run = latest_of("03_residual_stress", [variant, variant + "_report"])
     if run is None:
         return None
     rec = R.records(run)
@@ -695,10 +704,24 @@ its savings, which is within the statistical noise of {n} specimens.</p>''' + a3
     res = a3_outcomes("a1mm")
     if res is not None:
         t, run, dec = res
-        rows = [[r["label"], pct(r["fail"], 1), f2(r["unused"]), f"{r['readings']:.0f}"] for _, r in t.iterrows()]
-        out.append(f'''<h3>4.3 Cracks starting near 1 mm, at first sizing</h3>
-<p>The same schemes on cracks found at about 1 mm ({int(t["n"].iloc[0])} specimens, p<sub>act</sub> = 1 %).</p>''' +
-                   table(["Scheme", "Failed", "Life given up (nominal lives)", "Readings"], rows, num=(1, 2, 3)))
+        g = t.set_index("arm")
+        v = lambda a, k: float(g.loc[a, k]) if a in g.index else np.nan
+        b1, b2 = a3_fig(t)
+        out.append(f'''<h3>4.3 Cracks found near 1 mm: continuous monitoring is only as safe as its filter</h3>
+<p>On cracks that start near 1 mm, continuous monitoring with the growth-rate filter failed
+{pct(v("sd0.2|continuous|grid", "fail"), 1)} of {int(t["n"].iloc[0])} components, against
+{pct(v("sd0.2|periodic_0.1|grid", "fail"), 1)} for the same filter every 10 % of life, although it was told to act at a
+1 % chance of failure. Fed exact readings it failed {pct(v("perfect|continuous|grid", "fail"), 1)}. This is the pattern
+of 4.1, now large enough to matter: the more data the one-parameter filter sees, the more certain it becomes of a growth
+curve whose shape is wrong, and the later it acts. Perfect information monitored continuously failed
+{pct(v("oracle_continuous", "fail"), 0)} and gave up only {f2(v("oracle_continuous", "unused"))} nominal lives, against
+{f2(v("sd0.2|periodic_0.1|grid", "unused"))} for periodic inspection with the learning filter. The value of continuous
+monitoring is there; the filter has to be honest to collect it.</p>''')
+        out.append(fig("Failures in service: cracks starting near 1 mm",
+                       f"Plate, sizing sd 0.2 mm unless stated, p<sub>act</sub> = 1 %. {int(t['n'].iloc[0])} specimens per arm, 95 % Wilson intervals",
+                       b1, "The one-parameter filter fails more components the more readings it receives; perfect information "
+                           "does not.", A3_LEGEND))
+        out.append("<p>Break-even costs for these cracks, as in 4.2:</p>" + a3_breakeven_table("a1mm"))
     else:
         out.append(missing("E-02 a1mm"))
     out.append("</section>")
@@ -715,14 +738,21 @@ can tell which of three cases a component is in: tensile as-welded, none, or com
     orc = a2_oracle()
     if orc is not None:
         o, arr = orc
-        rows = [[c, f"{d:g} mm", f2(r.get("blind_bias", np.nan)), pct(r.get("rs_reduction", np.nan))]
-                for (c, d), r in o.set_index(["true_class", "depth_mm"]).iterrows()]
+        oi = o.set_index(["true_class", "depth_mm"])
+        rows = []
+        for c in ("tensile", "none", "compressive"):
+            if c not in oi.index.get_level_values(0):
+                continue
+            d = oi.loc[c]
+            rows.append([c.capitalize()] + [f2(float(d.loc[x, "blind_bias"])) if x in d.index else "–" for x in (1.0, 2.0, 4.0)]
+                        + [pct(float(d["rs_reduction"].max()))])
         out.append(f'''<h3>5.1 What a wrong assumption costs</h3>
 <p>The class-blind oracle forecasts with the residual-stress class uncertain (equal odds); the class-known oracle knows
-it. The difference in median life is the bias of not knowing. Once the class is known, amplitude and decay length are
+it. The difference in median life is the bias of not knowing: positive means a forecast that ignores the class
+over-predicts life, which is unconservative. Once the class is known, amplitude and decay length are
 worth the U90 reduction in the last column (P2.2: 7 % or less).</p>''' + table(
-            ["True class", "Depth", "Median-life bias, class unknown (decades)", "Further U90 cut from amplitude and decay length"],
-            rows, num=(2, 3)))
+            ["True class", "Bias at 1 mm (decades)", "2 mm", "4 mm", "Amplitude and decay length worth (largest)"],
+            rows, num=(1, 2, 3, 4)))
     cls, run = a2_classification("03_residual_stress", "a1mm")
     if cls is not None:
         r = cls["rate"]
@@ -740,29 +770,42 @@ worth the U90 reduction in the last column (P2.2: 7 % or less).</p>''' + table(
         out.append('<h3>5.2 From the depth record alone</h3>' + fig(
             "How quickly the depth record reveals the residual-stress class",
             "Plate, cracks starting near 1 mm, three classes equally likely. Correct when the most probable class is the true one",
-            b, "The gate (80 % correct by half of life at sd 0.2 mm) is a PLACEHOLDER agreed before the run.",
+            b, "The gate (80 % correct by half of life at sd 0.2 mm) is a PLACEHOLDER set before the run.",
             svg.legend([s["name"] for s in ser], ["line"] * len(ser))))
-        bc = cls["by_class"]
-        x = bc[(bc["estimator"] == "bf") & (bc["sensor"] == "sd0.2") & (bc["policy"] == "continuous") & np.isclose(bc["frac"], 0.5)]
+        rec = cls["rec"]
+        x = rec[(rec["estimator"] == "bf") & (rec["sensor"] == "sd0.2") & (rec["policy"] == "continuous") & np.isclose(rec["frac"], 0.5)]
         if len(x):
-            out.append("<p>By class at half of life (continuous, sd 0.2 mm): " + "; ".join(
-                f"{c} {pct(v)}" for c, v in zip(x["true_class"], x["correct"])) + ".</p>")
+            cm = pd.crosstab(x["true_class"], x["pred_class"], normalize="index")
+            order = [c for c in ("tensile", "none", "compressive") if c in cm.index]
+            rows = [[f"True {c}"] + [pct(float(cm.loc[c, d])) if d in cm.columns else "–" for d in order] for c in order]
+            out.append("<p>Where the calls go at half of life (continuous, sd 0.2 mm). A peened layer has largely faded "
+                       "by the time the crack is 1 mm deep, so compressive is read as no stress; and a stress-free crack "
+                       "growing fast can pass for a tensile one, because stress and growth rate act on the record in the "
+                       "same way.</p>" + table(["", *[f"Called {c}" for c in order]], rows, num=(1, 2, 3)))
     lcr, run = a2_classification("03c_residual_lcr", "a1mm")
     if lcr is not None:
         r = lcr["rate"]
-        rows = []
-        for sens in ["sd0.2", "sd0.2+lcr10", "sd0.2+lcr20", "sd0.2+lcr40", "sd0.2+lcr80"]:
-            row = [("Depth only" if sens == "sd0.2" else f"Depth + LCR, {sens.split('lcr')[1]} MPa per layer")]
-            for pol in ("none", "periodic_0.1"):
-                d = r[(r["estimator"] == "bf") & (r["sensor"] == sens) & (r["policy"] == pol)].set_index("frac")["correct"]
-                row += [pct(d.get(0.1, np.nan)), pct(d.get(0.5, np.nan))]
-            rows.append(row)
-        out.append('<h3>5.3 With an LCR survey at installation</h3>'
-                   '<p>One LCR survey of layer-average stress (1, 2, 4 and 6 mm) at installation, error per layer 10–80 MPa '
-                   'plus a 20 MPa offset shared by the survey (PLACEHOLDERS; Javadi et al. report agreement with FE within about '
-                   '±40 MPa <a class="ref" href="#r18">[18]</a>).</p>' + table(
-                       ["Information", "Survey only: 10 % of life", "Survey only: 50 %", "Survey + depth every 10 %: 10 %",
-                        "Survey + depth: 50 %"], rows, num=(1, 2, 3, 4)))
+        lv = lambda sens, pol, fr: float(r[(r["estimator"] == "bf") & (r["sensor"] == sens) & (r["policy"] == pol)
+                                           & np.isclose(r["frac"], fr)]["correct"].iloc[0])
+        errs = (10, 20, 40, 80)
+        alone = [lv(f"sd0.2+lcr{k}", "none", 0.1) for k in errs]
+        both = [lv(f"sd0.2+lcr{k}", "periodic_0.1", 0.5) for k in errs]
+        dep = lv("sd0.2", "periodic_0.1", 0.5)
+        f = a2_facts()
+        b = svg.columns([f"{k} MPa" for k in errs], ["Survey alone, at 10 % of life", "Survey + depth every 10 %, at half of life"],
+                        [alone, both], ylabel="Correct class", pct=True, ymax=1.0, height=270, label_tops=True, dp=0,
+                        ref=[(0.8, "Gate: 80 %"), (f.get("c05", dep), "Depth alone, continuous, at half of life")])
+        out.append(f'''<h3>5.3 With an LCR survey at installation</h3>
+<p>One LCR survey of layer-average stress at 1, 2, 4 and 6 mm when the component enters service, with an error per layer of
+10–80 MPa plus a 20 MPa offset shared by the whole survey (temperature or reference error). All PLACEHOLDERS: Javadi et
+al. report agreement with finite-element predictions within about ±40 MPa {ref(18)}.</p>''' + fig(
+            "One stress survey does what a lifetime of depth readings cannot",
+            "Plate, cracks starting near 1 mm, three classes equally likely, Bayes-factor classification",
+            b, f"The survey reads the class on day one: {pct(alone[0])} correct at 10 MPa per layer, {pct(alone[1])} at 20, "
+               f"{pct(alone[2])} at 40 and {pct(alone[3])} at 80 MPa. Adding the depth record barely changes it. The gate is "
+               f"met up to about 40 MPa per layer, which is where published LCR accuracy sits, so the measurement error "
+               f"achievable on the target components decides this approach.",
+            svg.legend(["Survey alone, at 10 % of life", "Survey + depth every 10 %, at half of life"])))
     out.append("</section>")
     return "".join(out)
 
@@ -810,13 +853,15 @@ def sec_provenance():
     if rt.empty:
         return ""
     rows = [[r["experiment"], r["variant"], str(r["n"]), str(r["arrested"]), f2(r["runtime_min"], 0),
-             f'<code>{r["commit"]}</code>' + (" (uncommitted changes)" if r["dirty"] else ""), f'<code>{r["config_hash"]}</code>']
+             f'<code>{r["commit"]}</code>' + ("*" if r["dirty"] else ""), f'<code>{r["config_hash"]}</code>']
             for _, r in rt.iterrows()]
     return f'''<section id="runs"><h2>Appendix · Runs used</h2>
 <p>Newest run of each experiment variant; each directory holds a manifest with the resolved configuration, the code
 commit, the pinned NASGRO pipeline commit (28f217c, hash-verified), package versions and the seed (20261023). Rerun any of
 them with <code>python experiments/&lt;script&gt; --variant &lt;name&gt; --n &lt;n&gt;</code>.</p>
 {table(["Experiment", "Variant", "Specimens", "Never grow", "Minutes (4 cores)", "Code commit", "Config hash"], rows, num=(2, 3, 4), wide=True)}
+<p class="small muted">* Flagged as having uncommitted changes because earlier runs had rewritten tracked summary files.
+The code, configurations and pipeline were those of the recorded commit; from commit 1a52e42 the flag covers only those.</p>
 </section>'''
 
 
@@ -868,6 +913,9 @@ def key_numbers():
         k["grid_cov_many"] = float(g["coverage"].iloc[-1])
         cal = k["lc"]["cal"].set_index("arm")
         k["cont02_cov"] = float(cal.loc["sd0.2|continuous|grid", "coverage"])
+    rb = a1_robust()
+    if "a1mm" in rb:
+        k["cont02_cov_1mm"] = rb["a1mm"]["sd0.2|continuous|grid"]["cov"]
     return k
 
 
@@ -929,7 +977,20 @@ def a3_facts():
     return dict(cp20=v("sd0.2|periodic_0.2|static_mc", "unused"), lf10=v("sd0.2|periodic_0.1|grid", "unused"),
                 cont=v("sd0.2|continuous|grid", "unused"), cont_fail=v("sd0.2|continuous|grid", "fail"),
                 perf_fail=v("perfect|continuous|grid", "fail"), bond=v("bond0.2|continuous|grid", "fail"),
-                per_fail=v("sd0.2|periodic_0.1|grid", "fail"), n=int(res[0]["n"].iloc[0]))
+                per_fail=v("sd0.2|periodic_0.1|grid", "fail"), n=int(res[0]["n"].iloc[0]),
+                **a3_facts_1mm())
+
+
+def a3_facts_1mm():
+    res = a3_outcomes("a1mm")
+    if res is None:
+        return {}
+    g = res[0].set_index("arm")
+    v = lambda a, c: float(g.loc[a, c]) if a in g.index else np.nan
+    return dict(c1_fail=v("sd0.2|continuous|grid", "fail"), c1_unused=v("sd0.2|continuous|grid", "unused"),
+                p1_fail=v("sd0.2|periodic_0.1|grid", "fail"), p1_unused=v("sd0.2|periodic_0.1|grid", "unused"),
+                perf1_fail=v("perfect|continuous|grid", "fail"), or1_fail=v("oracle_continuous", "fail"),
+                or1_unused=v("oracle_continuous", "unused"), n1=int(res[0]["n"].iloc[0]))
 
 
 def summary_list(k):
@@ -943,7 +1004,7 @@ def summary_list(k):
                      f"sensor and the estimator, not about the simulation.")
     sz, cb = k.get("size"), k.get("cb")
     if sz and cb:
-        items.append(f"<strong>Approach 1's static claims hold, with smaller margins.</strong> One sizing at sd 0.17 mm gives "
+        items.append(f"<strong>Approach 1's static claims hold; check B's holds in direction.</strong> One sizing at sd 0.17 mm gives "
                      f"{pct(sz['cp017'])} of the exact-depth benefit (study {pct(sz['study017'])}). Ten sizings at 0.1 mm cut the "
                      f"spread by {pct(cb['red']['sd0.1']['sim'])} against one (study 30–40 %), and at 0.5 mm by "
                      f"{pct(cb['red']['sd0.5']['sim'])} (study about 10 %): repetition pays even with a coarse sensor.")
@@ -952,18 +1013,20 @@ def summary_list(k):
                      f"confidence.</strong> Followed from below the detection limit and monitored continuously at sd 0.2 mm, a filter that "
                      f"learns one growth-rate multiplier removes {pct(f['cont02'])} of the plate's spread at 1 mm, close to the "
                      f"{pct(f['lam_oracle'])} of an oracle that knows depth, shape and λ, and far beyond the "
-                     f"{pct(f['depth_oracle'])} for depth alone. Its intervals then cover only {pct(k['cont02_cov'])} "
+                     f"{pct(f['depth_oracle'])} for depth alone. But its intervals become overconfident as readings accumulate: "
+                     f"monitoring cracks continuously from 1 mm, they cover {pct(k.get('cont02_cov_1mm'))} of true lives "
                      f"instead of 90 % ({pct(k['grid_cov_many'])} after more than 30 readings at sd 0.1 mm), because NASGRO's growth curve differs between cracks in shape, not only in level. A "
                      f"filter that carries the full NASGRO uncertainty stays honest. Approach 1 needs that kind of filter, or a "
                      f"model-discrepancy term.")
     if a3:
-        items.append(f"<strong>Approach 3: continuous monitoring buys back service life, not safety.</strong> With cracks starting "
-                     f"below detection, every periodic scheme failed {pct(a3['per_fail'], 0)} of {a3['n']} components, as did "
-                     f"continuous monitoring within noise ({pct(a3['cont_fail'], 1)}). The difference is life given up by acting "
-                     f"early: {a3['cp20']:.2f} nominal lives for current practice every 20 % of life, {a3['lf10']:.2f} for the "
-                     f"learning filter every 10 %, {a3['cont']:.2f} continuous. Two risks dominate: a silently de-bonded array "
-                     f"({pct(a3['bond'], 0)} failed) and exact readings fed to the overconfident filter ({pct(a3['perf_fail'], 1)} "
-                     f"failed).")
+        items.append(f"<strong>Approach 3: continuous monitoring buys back service life, and is only as safe as its filter."
+                     f"</strong> It cuts the life given up by acting early from {a3['lf10']:.2f}–{a3['cp20']:.2f} nominal lives "
+                     f"(periodic) to {a3['cont']:.2f}. But with the one-parameter filter it is not safer: on cracks found at "
+                     f"1 mm it failed {pct(a3.get('c1_fail'), 0)} of components against {pct(a3.get('p1_fail'), 0)} for "
+                     f"inspection every 10 % of life, and fed exact readings {pct(a3.get('perf1_fail'), 0)}. Perfect information "
+                     f"monitored continuously failed none and gave up {a3.get('or1_unused', float('nan')):.2f} lives: the prize "
+                     f"is real, and an honest filter is what stands between it and the sensor. A silently de-bonded array "
+                     f"failed {pct(a3['bond'], 0)}.")
     a2 = a2_facts()
     if a2:
         items.append(a2["summary"])
@@ -974,7 +1037,88 @@ def summary_list(k):
 
 
 def a2_facts():
-    return {}
+    cls, run = a2_classification("03_residual_stress", "a1mm")
+    if cls is None:
+        return {}
+    r = cls["rate"]
+    get = lambda est, sens, pol, fr: float(r[(r["estimator"] == est) & (r["sensor"] == sens) & (r["policy"] == pol)
+                                             & np.isclose(r["frac"], fr)]["correct"].iloc[0])
+    f = dict(c05=get("bf", "sd0.2", "continuous", 0.5), c09=get("bf", "sd0.2", "continuous", 0.9),
+             p05=get("bf", "sd0.2", "periodic_0.1", 0.5), i05=get("is", "sd0.2", "periodic_0.1", 0.5))
+    bc = cls["by_class"]
+    x = bc[(bc["estimator"] == "bf") & (bc["sensor"] == "sd0.2") & (bc["policy"] == "continuous") & np.isclose(bc["frac"], 0.5)]
+    f["by_class"] = dict(zip(x["true_class"], x["correct"]))
+    orc = a2_oracle()
+    if orc is not None:
+        o = orc[0].set_index(["true_class", "depth_mm"])
+        f["bias_t1"] = float(o.loc[("tensile", 1.0), "blind_bias"]) if ("tensile", 1.0) in o.index else np.nan
+        f["bias_c1"] = float(o.loc[("compressive", 1.0), "blind_bias"]) if ("compressive", 1.0) in o.index else np.nan
+        f["rs_max"] = float(o["rs_reduction"].max())
+    lcr, _ = a2_classification("03c_residual_lcr", "a1mm")
+    if lcr is not None:
+        q = lcr["rate"]
+        lv = lambda sens, pol, fr: float(q[(q["estimator"] == "bf") & (q["sensor"] == sens) & (q["policy"] == pol)
+                                           & np.isclose(q["frac"], fr)]["correct"].iloc[0])
+        f["lcr"] = {k: lv(f"sd0.2+lcr{k}", "none", 0.1) for k in (10, 20, 40, 80)}
+        f["lcr_dep"] = {k: lv(f"sd0.2+lcr{k}", "periodic_0.1", 0.5) for k in (10, 20, 40, 80)}
+    lcr_txt = ""
+    if "lcr" in f:
+        lcr_txt = (f" One LCR survey at installation reads the class directly: {pct(f['lcr'][20])} correct at 20 MPa error per "
+                   f"layer and {pct(f['lcr'][40])} at 40 MPa, from the first day.")
+    f["summary"] = (f"<strong>Approach 2: the depth record alone is a slow and partial witness of residual stress.</strong> "
+                    f"Monitored continuously at sd 0.2 mm, the class (tensile, none, compressive) is right {pct(f['c05'])} "
+                    f"of the time by half of life and {pct(f['c09'])} by 90 % (gate: 80 % by half of life). A peened layer "
+                    f"has faded by the time a crack is 1 mm deep, so compressive reads as no stress, and no stress can pass "
+                    f"for tensile combined with a slower growth rate: stress and growth rate are confounded in a depth "
+                    f"record.{lcr_txt} "
+                    f"Once the class is known, amplitude and decay length add at most {pct(f.get('rs_max', np.nan))} "
+                    f"(study: 7 % or less), so presence and sign are what matter, as the study said.")
+    rows = [["Presence and sign of residual stress matter more than its size (amplitude and decay length ≤ 7 % of U90)",
+             f"Given the class, amplitude and decay length cut U90 by at most {pct(f.get('rs_max', np.nan))}; ignoring a "
+             f"tensile class over-predicts 1 mm life by {f2(f.get('bias_t1', np.nan))} decades",
+             pill("good", "Holds")],
+            ["(Not in the scoping page) Can the depth record reveal the class?",
+             f"{pct(f['c05'])} correct by half of life (continuous, sd 0.2 mm); compressive "
+             f"{pct(f['by_class'].get('compressive', np.nan))}, tensile {pct(f['by_class'].get('tensile', np.nan))}",
+             pill("bad", "Not by itself")]]
+    if "lcr" in f:
+        rows.append(["(Not in the scoping page) Does an LCR survey resolve it?",
+                     f"Survey alone: {pct(f['lcr'][10])} (10 MPa), {pct(f['lcr'][20])} (20), {pct(f['lcr'][40])} (40), "
+                     f"{pct(f['lcr'][80])} (80 MPa per layer)",
+                     pill("good" if f["lcr"][40] >= 0.8 else "warn", "Yes, if the error is small enough")])
+    f["rows"] = rows
+    return f
+
+
+def efficacy_chain():
+    """Approach 1, plate, 1 mm: prediction, oracle, realistic arms, realised fraction and coverage, and the
+    same arms when the model is wrong (2 mm, cracks from 1 mm)."""
+    run = R.latest("01_depth_only", "consistency")
+    if run is None:
+        return ""
+    e = D.efficacy_at(run, 1.0)
+    cal = D.calibration(run).set_index("arm")
+    pred = PRED["P1.1"]["values"]["plate"][1.0]
+    rb = a1_robust()
+    arms = [("sd0.2|sized_now|static_mc", "Current practice, one fresh sizing"),
+            ("sd0.2|periodic_0.1|is", "Full-NASGRO filter, every 10 % of life"),
+            ("sd0.2|periodic_0.1|grid", "Growth-rate filter, every 10 %"),
+            ("sd0.2|continuous|grid", "Growth-rate filter, continuous")]
+    rows = [["Study prediction (P1.1)", pct(pred), "–", "–", "–"],
+            ["Oracle: depth known exactly", pct(float(e.loc["oracle_depth", "realised"])), "1.00", "–", "–"],
+            ["Oracle: depth, shape and λ known", pct(float(e.loc["oracle_state_lambda", "realised"])),
+             f2(float(e.loc["oracle_state_lambda", "fraction"])), "–", "–"]]
+    for a, lab in arms:
+        c = cal.loc[a, "coverage"] if a in cal.index else np.nan
+        w = rb.get("a1mm_mismatched", {}).get(a)
+        rows.append([lab + ", sd 0.2 mm", pct(float(e.loc[a, "realised"])), f2(float(e.loc[a, "fraction"])), pct(c),
+                     pct(w["cov"]) if w else "not run"])
+    return ("<h3>Approach 1 as one chain: prediction, oracle, realistic, realised fraction</h3>"
+            "<p>Plate, U90 reduction at 1 mm against the study baseline, cracks followed from 0.15 mm. Realised fraction is "
+            "the reduction divided by the depth oracle's. Coverage is measured at truth-independent moments; the last "
+            "column repeats it with the truth grown by a model no filter contains (cracks from 1 mm).</p>" +
+            table(["Arm", "U90 reduction", "Realised fraction", "Coverage (model right)", "Coverage (model wrong)"],
+                  rows, num=(1, 2, 3, 4)))
 
 
 def sec_meaning(k):
@@ -989,7 +1133,7 @@ def sec_meaning(k):
     if sz:
         rows.append(["Sizing to about 0.2 mm captures most of the depth benefit",
                      f"One sizing at 0.17 mm: {pct(sz['cp017'])} (study {pct(sz['study017'])}); at 0.2 mm {pct(sz['cp02'])}",
-                     pill("good", "Holds, slightly weaker")])
+                     pill("good", "Holds")])
     if f.get("lam_oracle") is not None:
         rows.append(["62–84 % of the remaining spread is one growth-rate multiplier λ, which repeated sizing measures",
                      f"λ oracle removes {pct(f['lam_oracle'])} at 1 mm; continuous sizing at 0.2 mm reaches {pct(f['cont02'])}, "
@@ -1006,16 +1150,19 @@ def sec_meaning(k):
                      pill("bad", "New risk for Approach 1")])
     if a3:
         rows.append(["(Not in the scoping page) Does continuous monitoring beat periodic inspection?",
-                     f"Same failure rate within noise; life given up {a3['cont']:.2f} vs {a3['lf10']:.2f}–{a3['cp20']:.2f} "
-                     f"nominal lives; silent de-bonding fails {pct(a3['bond'], 0)}",
-                     pill("info", "Pays in life, if the array is watched")])
+                     f"Life given up {a3['cont']:.2f} vs {a3['lf10']:.2f}–{a3['cp20']:.2f} nominal lives; but with the "
+                     f"one-parameter filter {pct(a3.get('c1_fail'), 0)} failed at 1 mm (periodic {pct(a3.get('p1_fail'), 0)}); "
+                     f"silent de-bonding {pct(a3['bond'], 0)}",
+                     pill("warn", "Pays only with an honest filter and a watched array")])
     a2 = a2_facts()
     rows += a2.get("rows", [])
+    chain = efficacy_chain()
     return f'''
 <section id="meaning">
 <h2>6 · What this means for the scoping report</h2>
 <p>Each claim on the scoping page that the first round could test, against what the simulation found.</p>
 <div class="verdict">{table(["Scoping claim", "Simulation", "Verdict"], rows)}</div>
+{chain}
 </section>'''
 
 
@@ -1035,7 +1182,7 @@ rate scatter, and An et al.'s installed-array records {ref(19)} for real reading
 is cheap and turns a silent loss of data into a known gap, which the decision rule can then cover with a manual
 inspection.</li>
 <li><strong>Approach 2: choose between the depth record and an LCR survey</strong> once the LCR error achievable on the
-target components is known; the table in 5.3 gives the error needed.</li>
+target components is known; the chart in 5.3 gives the error needed (about 40 MPa per layer).</li>
 <li><strong>Second round:</strong> Approach 4 (crack opening under a change of stress ratio, E-04) and Approach 5
 (scattering geometry and tilt, E-05).</li>
 </ol>

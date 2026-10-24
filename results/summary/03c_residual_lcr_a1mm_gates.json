@@ -1,0 +1,91 @@
+{
+ "thresholds": {
+  "placeholder": true,
+  "continuous_policy": "continuous",
+  "u90_reduction_min": 0.3,
+  "coverage_band": [
+   0.85,
+   0.95
+  ],
+  "oracle_tolerance": 0.03,
+  "sd_mm": 0.2,
+  "min_correct": 0.8,
+  "by_life_fraction": 0.5,
+  "strong_two_ln_bf": 6.0
+ },
+ "by_policy": {
+  "bf|sd0.2|none": {
+   "first_life_fraction": null,
+   "passes": false
+  },
+  "bf|sd0.2|periodic_0.1": {
+   "first_life_fraction": null,
+   "passes": false
+  },
+  "bf|sd0.2+lcr10|none": {
+   "first_life_fraction": 0.1,
+   "passes": true
+  },
+  "bf|sd0.2+lcr10|periodic_0.1": {
+   "first_life_fraction": 0.1,
+   "passes": true
+  },
+  "bf|sd0.2+lcr20|none": {
+   "first_life_fraction": 0.1,
+   "passes": true
+  },
+  "bf|sd0.2+lcr20|periodic_0.1": {
+   "first_life_fraction": 0.1,
+   "passes": true
+  },
+  "bf|sd0.2+lcr40|none": {
+   "first_life_fraction": 0.1,
+   "passes": true
+  },
+  "bf|sd0.2+lcr40|periodic_0.1": {
+   "first_life_fraction": 0.1,
+   "passes": true
+  },
+  "bf|sd0.2+lcr80|none": {
+   "first_life_fraction": null,
+   "passes": false
+  },
+  "bf|sd0.2+lcr80|periodic_0.1": {
+   "first_life_fraction": null,
+   "passes": false
+  },
+  "is|sd0.2|none": {
+   "first_life_fraction": null,
+   "passes": false
+  },
+  "is|sd0.2|periodic_0.1": {
+   "first_life_fraction": null,
+   "passes": false
+  },
+  "is|sd0.2+lcr20|none": {
+   "first_life_fraction": 0.1,
+   "passes": true
+  },
+  "is|sd0.2+lcr20|periodic_0.1": {
+   "first_life_fraction": 0.1,
+   "passes": true
+  },
+  "is|sd0.2+lcr40|none": {
+   "first_life_fraction": 0.1,
+   "passes": true
+  },
+  "is|sd0.2+lcr40|periodic_0.1": {
+   "first_life_fraction": 0.1,
+   "passes": true
+  },
+  "is|sd0.2+lcr80|none": {
+   "first_life_fraction": null,
+   "passes": false
+  },
+  "is|sd0.2+lcr80|periodic_0.1": {
+   "first_life_fraction": null,
+   "passes": false
+  }
+ },
+ "run_dir": "/home/user/UT-NASGRO-Prognosis/results/03c_residual_lcr/a1mm/2026-10-24T173456Z_b5172c61"
+}

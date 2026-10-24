@@ -1,0 +1,17 @@
+{
+ "thresholds": {
+  "placeholder": true,
+  "continuous_policy": "continuous",
+  "u90_reduction_min": 0.3,
+  "coverage_band": [
+   0.85,
+   0.95
+  ],
+  "oracle_tolerance": 0.03
+ },
+ "oracle_matches_prediction": true,
+ "any_pass": true,
+ "runs": {
+  "consistency": "/home/user/UT-NASGRO-Prognosis/results/01b_depth_only_bar/consistency/2026-10-24T181642Z_d1bf5eb0"
+ }
+}

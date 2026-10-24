@@ -26,14 +26,18 @@ Approaches follow the scoping page: 1 growth rate, 2 residual stress, 3 interval
 | 2 · Oracle arms, fixed-depth scoring, same cases and spreads | done; oracle reproduces stored U90 and every tested reduction to 1e-9 |
 | 3 · Code: renumbering, LCR sensor + E-03c, bond failure, biased sensor, perfect inspection, mismatched truth, sweeps | done for Approaches 1–3; E-04, E-05 are the second round |
 | 4 · Inputs agreed with supervisors (sensor values, gates, costs) | **open**: every such value is marked PLACEHOLDER |
-| 5 · Runs | tests pass (85); every config smoke-tested on 2–3 specimens; **no experiment run yet** |
+| 5 · Runs | first round run on 24 Oct at reduced specimen counts (D-009); tests pass (86) |
+
+**Supervisor report:** `reports/supervisor_report.html`, built by `python reports/supervisor.py` from the newest
+run of each variant (it needs the raw `records.csv.gz` files, which are not committed: rerun the experiments to
+regenerate them; seeds are fixed, so the numbers reproduce).
 
 ## Rerun
 
 ```bash
 git clone --recurse-submodules <this repo>        # or: git submodule update --init
 pip install -e ".[test]"
-python -m pytest                                   # 85 tests, incl. test 3 and the oracle checks (~40 s)
+python -m pytest                                   # 86 tests, incl. test 3 and the oracle checks (~40 s)
 
 # after the inputs are agreed, in this order:
 python experiments/00_toy.py

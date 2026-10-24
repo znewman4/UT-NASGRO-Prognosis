@@ -120,11 +120,11 @@ Approach numbers follow the scoping page: 1 growth rate, 2 residual stress, 3 in
 
 | ID | Config | Question | Result | What it changes |
 |---|---|---|---|---|
-| E-00 | `00_toy.yaml` | Do coverage and SBC hold when the estimator is well-specified? | not yet run (test 2 passes on 400 toy specimens) | |
-| E-01 | `01_depth_only.yaml` | Approach 1: realised fraction of P1.1–P1.4 against sizing error, spacing, start depth | not yet run | |
-| E-01b | `01b_depth_only_bar.yaml` | Same, round bar | not yet run | |
+| E-00 | `00_toy.yaml` | Do coverage and SBC hold when the estimator is well-specified? | 400 specimens: coverage 89–92 % on every arm | machinery trusted |
+| E-01 | `01_depth_only.yaml` | Approach 1: realised fraction of P1.1–P1.4 against sizing error, spacing, start depth | oracle within 1.6 points of P1.1 at all 5 depths; current practice 89 % of the depth benefit at sd 0.17 mm (P1.2: 86 %); check B 31 % / 14 % (P1.4: 30–40 % / ~10 %); continuous λ filter removes 83 % at 1 mm but covers 64–85 % (70 % after >30 readings) | Approach 1 needs a model-discrepancy term or the full-NASGRO filter |
+| E-01b | `01b_depth_only_bar.yaml` | Same, round bar | oracle within 0.6 points at 4 depths; check B 21 % / 17 % | as E-01 |
 | E-01c | `01c_sensor_sweeps.yaml` | Approach 1 under relative error, correlation, shared bias and POD | not yet run | |
-| E-02 | `02_intervals.yaml` | Approach 3: when continuous beats periodic per unit cost; robustness to bias and de-bonding | not yet run | |
-| E-03 | `03_residual_stress.yaml` | Approach 2: can depth alone classify tensile / none / compressive? | not yet run | |
+| E-02 | `02_intervals.yaml` | Approach 3: when continuous beats periodic per unit cost; robustness to bias and de-bonding | 120 specimens: continuous gives up 0.02 nominal lives vs 0.15–1.06 periodic; λ filter continuous fails 5 % from 1 mm (periodic 0 %), perfect inspection 15 %, perfect information 0 %; silent de-bond 84 % | continuous pays only with an honest filter and a sensor-health check |
+| E-03 | `03_residual_stress.yaml` | Approach 2: can depth alone classify tensile / none / compressive? | `a1mm_report`, 100 specimens: 64 % correct by half of life (continuous, sd 0.2 mm), 81 % by 90 %; amplitude and decay length ≤ 6 % (P2.2 holds) | depth alone is not enough |
 | E-03b | `03b_residual_forms.yaml` | Approach 2: superposition / BS 7910 uniform / redistribution | not yet run | |
-| E-03c | `03c_residual_lcr.yaml` | Approach 2: LCR layer averages, alone and with depth | not yet run | |
+| E-03c | `03c_residual_lcr.yaml` | Approach 2: LCR layer averages, alone and with depth | one survey: 97 / 90 / 83 / 70 % correct at 10 / 20 / 40 / 80 MPa per layer | gate met up to ~40 MPa |

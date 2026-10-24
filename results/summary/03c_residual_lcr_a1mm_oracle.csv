@@ -1,0 +1,10 @@
+true_class,depth_mm,blind_bias_decades,rs_params_u90_reduction,run_dir
+compressive,1.0,-0.13464975383490366,0.06136779867877851,/home/user/UT-NASGRO-Prognosis/results/03c_residual_lcr/a1mm/2026-10-24T173456Z_b5172c61
+compressive,2.0,-0.04957868462544382,-0.005966266178968338,/home/user/UT-NASGRO-Prognosis/results/03c_residual_lcr/a1mm/2026-10-24T173456Z_b5172c61
+compressive,4.0,-0.004522065024813411,-0.005554472957158829,/home/user/UT-NASGRO-Prognosis/results/03c_residual_lcr/a1mm/2026-10-24T173456Z_b5172c61
+none,1.0,-0.06790030879196793,0.0,/home/user/UT-NASGRO-Prognosis/results/03c_residual_lcr/a1mm/2026-10-24T173456Z_b5172c61
+none,2.0,-0.062406938546091785,0.0,/home/user/UT-NASGRO-Prognosis/results/03c_residual_lcr/a1mm/2026-10-24T173456Z_b5172c61
+none,4.0,-0.02471632253118024,2.220446049250313e-16,/home/user/UT-NASGRO-Prognosis/results/03c_residual_lcr/a1mm/2026-10-24T173456Z_b5172c61
+tensile,1.0,0.1954807397522635,0.055775318180685596,/home/user/UT-NASGRO-Prognosis/results/03c_residual_lcr/a1mm/2026-10-24T173456Z_b5172c61
+tensile,2.0,0.09809194517309495,0.050304879647274925,/home/user/UT-NASGRO-Prognosis/results/03c_residual_lcr/a1mm/2026-10-24T173456Z_b5172c61
+tensile,4.0,0.023072469679251365,0.020666224896585206,/home/user/UT-NASGRO-Prognosis/results/03c_residual_lcr/a1mm/2026-10-24T173456Z_b5172c61
